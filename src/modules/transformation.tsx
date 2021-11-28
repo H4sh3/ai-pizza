@@ -47,12 +47,25 @@ const genPosUUID = (x: number, y: number) => {
     return `${x}#${y}`
 }
 
-export const transformation = (segments: Segment[]): Node[] => {
-    const nodes: Map<string, Node> = new Map<string, Node>()
+export const transformation = (segments: Segment[]): { nodes: Node[], edges: Edge[] } => {
+    const nodes: Map<string, Node> = getNodes(segments)
+    const edges = getEdges(nodes, segments)
+    relateNotes(edges)
 
+    return { nodes: Array.from(nodes.values()), edges }
+}
+
+const getNodes = (segments: Segment[]) => {
+    const nodes: Map<string, Node> = new Map<string, Node>()
     // create map with nodes
     const posUUIDS = []
     segments.forEach(s => {
+        if (s.id === 0) {
+            console.log(s)
+        }
+        if (s.id === 2) {
+            console.log(s)
+        }
         const posUUIDstart = genPosUUID(s.start.x, s.start.y)
         if (!posUUIDS.includes(posUUIDstart)) {
             posUUIDS.push(posUUIDstart)
@@ -65,42 +78,43 @@ export const transformation = (segments: Segment[]): Node[] => {
             nodes.set(posUUIDend, new Node(s.id, s.end.x, s.end.y))
         }
     })
+    return nodes
+}
 
-    // create list of edges
+const getEdges = (nodes: Map<string, Node>, segments: Segment[]) => {
     const edges: Edge[] = []
     segments.forEach(s => {
         const node1 = nodes.get(genPosUUID(s.start.x, s.start.y))
-        let node2;
-        s.forward.forEach(forwardSegment => {
-            node2 = Array.from(nodes.values()).filter(n => n.id === forwardSegment.id)[0]
-        })
-
-        if (node2) {
-            const e = new Edge(node1, node2)
-            edges.push(e)
-        }
+        const node2 = nodes.get(genPosUUID(s.end.x, s.end.y))
+        edges.push(new Edge(node1, node2))
     })
+    return edges
+}
 
-    // assign edges to nodes
+const relateNotes = (edges: Edge[]) => {
     edges.forEach(e => {
         const { startNode, endNode } = e
         // locate endNode relativ to startNode
-        if (endNode.pos.x < startNode.pos.x) { // left
-            startNode.connections.left = e.endNode
-            endNode.connections.right = e.startNode
-        } else if (endNode.pos.x > startNode.pos.x) { // right
-            startNode.connections.right = e.endNode
-            endNode.connections.left = e.startNode
-        } else if (endNode.pos.y < startNode.pos.y) { // top
-            startNode.connections.top = e.endNode
-            endNode.connections.bottom = e.startNode
-        } else if (endNode.pos.y > startNode.pos.y) { // bottom
-            startNode.connections.bottom = e.endNode
-            endNode.connections.top = e.startNode
+        const diffX = Math.abs(Math.abs(startNode.pos.x) - Math.abs(endNode.pos.x))
+        const diffY = Math.abs(Math.abs(startNode.pos.y) - Math.abs(endNode.pos.y))
+
+        if (diffX > diffY) {
+            if (endNode.pos.x < startNode.pos.x) { // left
+                startNode.connections.left = e.endNode
+                endNode.connections.right = e.startNode
+            } else if (endNode.pos.x > startNode.pos.x) { // right
+                startNode.connections.right = e.endNode
+                endNode.connections.left = e.startNode
+            }
+        }
+        else {
+            if (endNode.pos.y < startNode.pos.y) { // top
+                startNode.connections.top = e.endNode
+                endNode.connections.bottom = e.startNode
+            } else if (endNode.pos.y > startNode.pos.y) { // bottom
+                startNode.connections.bottom = e.endNode
+                endNode.connections.top = e.startNode
+            }
         }
     })
-
-    console.log(edges.length)
-
-    return Array.from(nodes.values())
 }

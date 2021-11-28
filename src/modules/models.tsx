@@ -50,13 +50,13 @@ export const loadData = (input: SegmentJson[]): Segment[] => {
             minX = s.start.x
         }
         if (s.end.x < minX) {
-            minX = s.start.x
+            minX = s.end.x
         }
         if (s.start.y < minY) {
             minY = s.start.y
         }
         if (s.end.y < minY) {
-            minY = s.start.y
+            minY = s.end.y
         }
     })
 
@@ -70,7 +70,7 @@ export const loadData = (input: SegmentJson[]): Segment[] => {
         s.end.y += minY
     })
 
-    const faktor = 0.3
+    const faktor = 0.2
     tmp.forEach(s => {
         s.start.x *= faktor
         s.start.y *= faktor
@@ -86,22 +86,6 @@ export const loadData = (input: SegmentJson[]): Segment[] => {
         s.end.x = Math.round(s.end.x)
         s.end.y = Math.round(s.end.y)
     })
-
-    const deletedIds = []
-    tmp.forEach(s => {
-        if (s.start.x != s.end.x) {
-            if (s.start.y != s.end.y) {
-                deletedIds.push(s.id)
-            }
-        }
-    })
-
-    tmp = tmp.filter(s => !deletedIds.includes(s.id))
-    tmp.forEach(s => {
-        s.forward = s.forward.filter(id => !deletedIds.includes(id))
-        s.backward = s.backward.filter(id => !deletedIds.includes(id))
-    })
-
 
     return tmp
 }

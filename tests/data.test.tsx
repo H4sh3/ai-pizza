@@ -1,14 +1,9 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import * as TestUtils from 'react-dom/test-utils';
-import App from '../src/components/App';
-
-import { loadData, Segment, transformation } from '../src/modules/models'
+import { loadData, Segment } from '../src/modules/models'
 import { segmentsMock } from '../src/modules/data'
 
 it('First test', () => {
     const x = loadData(segmentsMock)
-    expect(x.length === 35).toBeTruthy()
+    expect(x.length).toBe(50)
 });
 
 it('reach all with forward', () => {
