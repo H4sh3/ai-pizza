@@ -1,3 +1,5 @@
+import { Vector } from "./transformation";
+
 export interface Position {
     x: number,
     y: number
@@ -18,6 +20,7 @@ export interface Segment {
     forward: Segment[],
     backward: Segment[]
 }
+
 
 export const loadData = (input: SegmentJson[]): Segment[] => {
     const segments = new Map<number, Segment>();
@@ -70,7 +73,7 @@ export const loadData = (input: SegmentJson[]): Segment[] => {
         s.end.y += minY
     })
 
-    const faktor = 0.2
+    const faktor = 0.3
     tmp.forEach(s => {
         s.start.x *= faktor
         s.start.y *= faktor

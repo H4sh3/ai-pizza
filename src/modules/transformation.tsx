@@ -1,5 +1,7 @@
 import { Segment } from "./models";
 
+import { NODE_SIZE } from './const'
+
 export class Vector {
     x: number
     y: number
@@ -10,7 +12,19 @@ export class Vector {
     }
 }
 
+class Line {
+    p1: Vector
+    p2: Vector
+
+    constructor(x1, y1, x2, y2) {
+        this.p1 = new Vector(x1, y1)
+        this.p2 = new Vector(x2, y2)
+    }
+}
+
+
 export class Edge {
+    id: number
     startNode: Node
     endNode: Node
 
@@ -24,10 +38,35 @@ export class Node {
     id: number
     pos: Vector
     connections: {
-        left: Node | undefined,
-        right: Node | undefined
-        top: Node | undefined,
-        bottom: Node | undefined
+        left: Edge | undefined,
+        right: Edge | undefined
+        top: Edge | undefined,
+        bottom: Edge | undefined
+    }
+
+    getLeft() {
+        return this.getDirection("left")
+    }
+    getRight() {
+        return this.getDirection("right")
+    }
+    getTop() {
+        return this.getDirection("top")
+    }
+    getBottom() {
+        return this.getDirection("bottom")
+    }
+
+    getDirection(direction) {
+        if (this.connections[direction] === undefined) {
+            return { node: undefined, edgeId: undefined }
+        }
+
+        if (this.connections[direction].startNode.id === this.id) {
+            return { node: this.connections[direction].endNode, edgeId: this.connections[direction].id }
+        } else {
+            return { node: this.connections[direction].startNode, edgeId: this.connections[direction].id }
+        }
     }
 
     constructor(id: number, x: number, y: number) {
@@ -40,6 +79,103 @@ export class Node {
             bottom: undefined,
         }
     }
+
+    getLines(): Line[] {
+        const lines: Line[] = []
+        const usedEdges = []
+        Object.keys(this.connections).forEach(direction => {
+            const { node, edgeId } = this.getDirection(direction)
+            if (node === undefined) {
+                if (direction === "top") {
+                    const x1 = this.pos.x - NODE_SIZE
+                    const y1 = this.pos.y - NODE_SIZE
+                    const x2 = this.pos.x + NODE_SIZE
+                    const y2 = this.pos.y - NODE_SIZE
+                    lines.push(new Line(x1, y1, x2, y2))
+                }
+                if (direction === "right") {
+                    const x1 = this.pos.x + NODE_SIZE
+                    const y1 = this.pos.y - NODE_SIZE
+                    const x2 = this.pos.x + NODE_SIZE
+                    const y2 = this.pos.y + NODE_SIZE
+                    lines.push(new Line(x1, y1, x2, y2))
+                }
+                if (direction === "bottom") {
+                    const x1 = this.pos.x - NODE_SIZE
+                    const y1 = this.pos.y + NODE_SIZE
+                    const x2 = this.pos.x + NODE_SIZE
+                    const y2 = this.pos.y + NODE_SIZE
+                    lines.push(new Line(x1, y1, x2, y2))
+                }
+                if (direction === "left") {
+                    const x1 = this.pos.x - NODE_SIZE
+                    const y1 = this.pos.y - NODE_SIZE
+                    const x2 = this.pos.x - NODE_SIZE
+                    const y2 = this.pos.y + NODE_SIZE
+                    lines.push(new Line(x1, y1, x2, y2))
+                }
+                return
+            }
+
+            if (usedEdges.includes(edgeId)) return
+
+            usedEdges.push(edgeId)
+
+            if (direction === "top") {
+                const x1 = this.pos.x - NODE_SIZE
+                const y1 = this.pos.y - NODE_SIZE
+                const x2 = node.pos.x - NODE_SIZE
+                const y2 = node.pos.y + NODE_SIZE
+                lines.push(new Line(x1, y1, x2, y2))
+
+                const x1_2 = this.pos.x + NODE_SIZE
+                const y1_2 = this.pos.y - NODE_SIZE
+                const x2_2 = node.pos.x + NODE_SIZE
+                const y2_2 = node.pos.y + NODE_SIZE
+                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
+            }
+            if (direction === "left") {
+                const x1 = this.pos.x - NODE_SIZE
+                const y1 = this.pos.y - NODE_SIZE
+                const x2 = node.pos.x + NODE_SIZE
+                const y2 = node.pos.y - NODE_SIZE
+                lines.push(new Line(x1, y1, x2, y2))
+
+                const x1_2 = this.pos.x - NODE_SIZE
+                const y1_2 = this.pos.y + NODE_SIZE
+                const x2_2 = node.pos.x + NODE_SIZE
+                const y2_2 = node.pos.y + NODE_SIZE
+                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
+            }
+            if (direction === "right") {
+                const x1 = this.pos.x + NODE_SIZE
+                const y1 = this.pos.y - NODE_SIZE
+                const x2 = node.pos.x - NODE_SIZE
+                const y2 = node.pos.y - NODE_SIZE
+                lines.push(new Line(x1, y1, x2, y2))
+
+                const x1_2 = this.pos.x + NODE_SIZE
+                const y1_2 = this.pos.y + NODE_SIZE
+                const x2_2 = node.pos.x - NODE_SIZE
+                const y2_2 = node.pos.y + NODE_SIZE
+                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
+            }
+            if (direction === "bottom") {
+                const x1 = this.pos.x - NODE_SIZE
+                const y1 = this.pos.y + NODE_SIZE
+                const x2 = node.pos.x - NODE_SIZE
+                const y2 = node.pos.y - NODE_SIZE
+                lines.push(new Line(x1, y1, x2, y2))
+
+                const x1_2 = this.pos.x + NODE_SIZE
+                const y1_2 = this.pos.y + NODE_SIZE
+                const x2_2 = node.pos.x + NODE_SIZE
+                const y2_2 = node.pos.y - NODE_SIZE
+                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
+            }
+        })
+        return lines
+    }
 }
 
 
@@ -49,7 +185,7 @@ const genPosUUID = (x: number, y: number) => {
 
 export const transformation = (segments: Segment[]): { nodes: Node[], edges: Edge[] } => {
     const nodes: Map<string, Node> = getNodes(segments)
-    const edges = getEdges(nodes, segments)
+    const edges: Edge[] = getEdges(nodes, segments)
     relateNotes(edges)
 
     return { nodes: Array.from(nodes.values()), edges }
@@ -60,12 +196,6 @@ const getNodes = (segments: Segment[]) => {
     // create map with nodes
     const posUUIDS = []
     segments.forEach(s => {
-        if (s.id === 0) {
-            console.log(s)
-        }
-        if (s.id === 2) {
-            console.log(s)
-        }
         const posUUIDstart = genPosUUID(s.start.x, s.start.y)
         if (!posUUIDS.includes(posUUIDstart)) {
             posUUIDS.push(posUUIDstart)
@@ -83,11 +213,18 @@ const getNodes = (segments: Segment[]) => {
 
 const getEdges = (nodes: Map<string, Node>, segments: Segment[]) => {
     const edges: Edge[] = []
+
     segments.forEach(s => {
         const node1 = nodes.get(genPosUUID(s.start.x, s.start.y))
         const node2 = nodes.get(genPosUUID(s.end.x, s.end.y))
         edges.push(new Edge(node1, node2))
     })
+
+    let indx = 0
+    edges.forEach(e => {
+        e.id = indx++
+    })
+
     return edges
 }
 
@@ -100,20 +237,20 @@ const relateNotes = (edges: Edge[]) => {
 
         if (diffX > diffY) {
             if (endNode.pos.x < startNode.pos.x) { // left
-                startNode.connections.left = e.endNode
-                endNode.connections.right = e.startNode
+                startNode.connections.left = e
+                endNode.connections.right = e
             } else if (endNode.pos.x > startNode.pos.x) { // right
-                startNode.connections.right = e.endNode
-                endNode.connections.left = e.startNode
+                startNode.connections.right = e
+                endNode.connections.left = e
             }
         }
         else {
             if (endNode.pos.y < startNode.pos.y) { // top
-                startNode.connections.top = e.endNode
-                endNode.connections.bottom = e.startNode
+                startNode.connections.top = e
+                endNode.connections.bottom = e
             } else if (endNode.pos.y > startNode.pos.y) { // bottom
-                startNode.connections.bottom = e.endNode
-                endNode.connections.top = e.startNode
+                startNode.connections.bottom = e
+                endNode.connections.top = e
             }
         }
     })
