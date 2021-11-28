@@ -7,10 +7,10 @@ it('transformation test', () => {
     const c = "c"
     const d = "d"
 
-    queue.insert(a,4)
-    queue.insert(b,1)
-    queue.insert(c,100)
-    queue.insert(d,0.1)
+    queue.put(a,4)
+    queue.put(b,1)
+    queue.put(c,100)
+    queue.put(d,0.1)
 
     expect(queue.size()).toBe(4)
     expect(queue.pop()).toBe(c)

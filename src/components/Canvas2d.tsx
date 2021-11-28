@@ -3,6 +3,7 @@ import { NODE_SIZE } from "../modules/const"
 import { segmentsMock, segmentsMock1 } from "../modules/data"
 import { loadData } from "../modules/models"
 import { transformation } from "../modules/transformation"
+import search from "../etc/astar"
 
 const Canvas2d: React.FC = () => {
     const props = {
@@ -19,10 +20,23 @@ const Canvas2d: React.FC = () => {
         context.fillRect(0, 0, context.canvas.width, context.canvas.height)
 
         const segments = loadData(segmentsMock1)
-        const t = transformation(segments)
+        const { nodes, edges } = transformation(segments)
+        //nodes.filter(n => n.id === 0)[0].id = -1
 
-        t.nodes.forEach(n => {
-            context.fillStyle = "#AAAAAA"
+        const start = nodes[100]
+        const end = nodes[0]
+
+        const path = search(nodes, start, end)
+
+
+        const pathIds = path.map(n => n.id)
+
+        nodes.forEach(n => {
+            if (pathIds.includes(n.id)) {
+                context.fillStyle = "#0000FF"
+            } else {
+                context.fillStyle = "#AAAAAA"
+            }
             context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
             context.fillStyle = "#000000"
             context.font = "30px Arial";
@@ -30,7 +44,7 @@ const Canvas2d: React.FC = () => {
         })
 
         let lines = []
-        t.nodes.forEach(n => {
+        nodes.forEach(n => {
             lines = [...lines, ...n.getLines()]
         })
         lines.forEach(l => {
@@ -39,12 +53,11 @@ const Canvas2d: React.FC = () => {
             context.lineTo(l.p2.x, l.p2.y);
             context.stroke();
         })
-        let s = '[\n'
-        lines.forEach(l => {
-            s += `new Line(${l.p1.x},${l.p1.y},${l.p2.x},${l.p2.y}),\n`
-        })
-        s+=']'
-        console.log(s)
+        // let s = '[\n'
+        // lines.forEach(l => {
+        //     s += `new Line(${l.p1.x},${l.p1.y},${l.p2.x},${l.p2.y}),\n`
+        // })
+        // s += ']'
     }, [])
 
     return <canvas ref={canvasRef} {...props} />

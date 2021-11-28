@@ -26,5 +26,5 @@ it('reach all with forward', () => {
         elements = elements.filter(e => e.id !== el.id)
         cnt += 1
     }
-    expect(cnt).toBe(35)
+    expect(cnt).toBe(50)
 });

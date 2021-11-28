@@ -73,7 +73,7 @@ export const loadData = (input: SegmentJson[]): Segment[] => {
         s.end.y += minY
     })
 
-    const faktor = 0.3
+    const faktor = 0.20
     tmp.forEach(s => {
         s.start.x *= faktor
         s.start.y *= faktor

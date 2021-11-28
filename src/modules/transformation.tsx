@@ -10,6 +10,10 @@ export class Vector {
         this.x = x;
         this.y = y;
     }
+
+    dist(other: Vector) {
+        return Math.sqrt(Math.pow(this.x - other.x, 2) + Math.pow(this.y - other.y, 2));
+    }
 }
 
 class Line {
@@ -32,6 +36,22 @@ export class Edge {
         this.startNode = start
         this.endNode = end
     }
+
+    getOther(id) {
+        if (this.startNode.id === id) {
+            return this.endNode
+        } else {
+            return this.startNode
+        }
+    }
+
+    exchangeNode(id, node) {
+        if (this.startNode.id === id) {
+            this.startNode = node
+        } else {
+            this.endNode = node
+        }
+    }
 }
 
 export class Node {
@@ -42,6 +62,20 @@ export class Node {
         right: Edge | undefined
         top: Edge | undefined,
         bottom: Edge | undefined
+    }
+
+    getNeightbours() {
+        const n = []
+        Object.keys(this.connections).forEach(direction => {
+            if (this.connections[direction] !== undefined) {
+                if (this.connections[direction].startNode.id === this.id) {
+                    n.push(this.connections[direction].endNode)
+                } else {
+                    n.push(this.connections[direction].startNode)
+                }
+            }
+        })
+        return n
     }
 
     getLeft() {
@@ -188,7 +222,10 @@ export const transformation = (segments: Segment[]): { nodes: Node[], edges: Edg
     const edges: Edge[] = getEdges(nodes, segments)
     relateNotes(edges)
 
-    return { nodes: Array.from(nodes.values()), edges }
+    const nArr = Array.from(nodes.values())
+    nArr.filter(n => n.id == 0)[0].id = -1
+
+    return { nodes: removeSimple(nArr), edges }
 }
 
 const getNodes = (segments: Segment[]) => {
@@ -226,6 +263,63 @@ const getEdges = (nodes: Map<string, Node>, segments: Segment[]) => {
     })
 
     return edges
+}
+
+
+const removeSimple = (nodes: Node[]) => {
+    let run = true
+    let i = 0
+    while (run) {
+        i++
+        let changed = false
+        let rmId
+        nodes.forEach(e => {
+            if (changed) return
+            if (e.connections.top !== undefined) return
+            if (e.connections.bottom !== undefined) return
+            if (e.connections.left === undefined) return
+            if (e.connections.right === undefined) return
+
+            console.log(e.id)
+            e.connections.left.exchangeNode(e.id, e.connections.right.getOther(e.id))
+            e.connections.right.exchangeNode(e.id, e.connections.left.getOther(e.id))
+
+            rmId = e.id
+            changed = true
+        })
+        
+        if (!changed) {
+            run = false
+        }
+        nodes = nodes.filter(x => x.id !== rmId)
+    }
+
+    run = true
+    i = 0
+    while (run) {
+        i++
+        let changed = false
+        let rmId
+        nodes.forEach(e => {
+            if (changed) return
+            if (e.connections.top === undefined) return
+            if (e.connections.bottom === undefined) return
+            if (e.connections.left !== undefined) return
+            if (e.connections.right !== undefined) return
+
+            e.connections.top.exchangeNode(e.id, e.connections.bottom.getOther(e.id))
+            e.connections.bottom.exchangeNode(e.id, e.connections.top.getOther(e.id))
+
+            rmId = e.id
+            changed = true
+        })
+        
+        if (!changed) {
+            run = false
+        }
+        nodes = nodes.filter(x => x.id !== rmId)
+    }
+    return nodes
 }
 
 const relateNotes = (edges: Edge[]) => {

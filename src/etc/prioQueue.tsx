@@ -3,9 +3,9 @@ function priorityQueue<T>() {
 
     return {
 
-        insert: (i: T, p: number) => {
+        put: (i: T, p: number) => {
             data.push([p, i])
-            data = data.sort((a, b) => a[0] > b[0] ? 1 : -1)
+            data = data.sort((a, b) => a[0] < b[0] ? 1 : -1)
         },
 
         isEmpty: () => data.length == 0,
