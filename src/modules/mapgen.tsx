@@ -1,6 +1,6 @@
 import { HEIGHT, NODE_SIZE, WIDTH } from "./const";
-import { radToDeg } from "./math";
-import { checkLineIntersection, Edge, Node, Vector } from "./models";
+import { radToDeg, checkLineIntersection } from "./math";
+import { Edge, Node, Vector } from "./models";
 
 const config = {
     width: WIDTH,

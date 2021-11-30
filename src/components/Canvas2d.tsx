@@ -44,13 +44,18 @@ const Canvas2d: React.FC = () => {
         let frameId
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
+        let lastTime
         const frame = time => {
             setFrameTime(time)
             frameId = requestAnimationFrame(frame)
 
+            const timeDelta = time - lastTime
+            if (timeDelta < 1000 / 60) return
+            lastTime = time
+
             context.fillStyle = "#AAAA99"
             context.fillRect(0, 0, WIDTH, HEIGHT)
-    
+
             const n = getNodes()
             renderNodes(n, context)
             renderStreets(n, context)
