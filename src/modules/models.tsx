@@ -33,6 +33,12 @@ export class Vector {
     dist(other: Vector) {
         return Math.sqrt(Math.pow(this.x - other.x, 2) + Math.pow(this.y - other.y, 2));
     }
+
+    add(other: Vector) {
+        this.x += other.x
+        this.y += other.y
+    }
+
 }
 
 export const isVector = (value: any): value is Vector => {
