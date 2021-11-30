@@ -27,6 +27,15 @@ it('vector mult', () => {
     expect(v1.y).toBe(50)
 });
 
+it('vector division', () => {
+    let v: Vector = new Vector(10, 10)
+    const l1 = v.mag()
+
+    v.div(2)
+    const l2 = v.mag()
+    expect(l1).toBe(l2 * 2)
+});
+
 it('vector copy', () => {
     const v1: Vector = new Vector(5, 10)
     const v2: Vector = v1.copy()
@@ -112,4 +121,3 @@ it('vector chain', () => {
     expect(v.x).toBe(-51)
     expect(v.y).toBe(48)
 });
-

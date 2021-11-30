@@ -54,6 +54,11 @@ export class Vector {
         return this
     }
 
+    div(scalar: number) {
+        this.x /= scalar
+        this.y /= scalar
+    }
+
     copy() {
         return new Vector(this.x, this.y)
     }
