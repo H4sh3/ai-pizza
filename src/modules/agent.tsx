@@ -35,7 +35,7 @@ class Agent {
     sensors: Sensor[]
     nn: NeuralNetwork
 
-    constructor(settings, nn) {
+    constructor(settings: AgentSettings, nn?: NeuralNetwork) {
         if (nn) {
             this.nn = nn.copy()
         } else {
@@ -72,19 +72,19 @@ class Agent {
         }
 
     }
-/* 
-    initNeuralNet(nn) {
-        if (nn) {
-            //this.nn = nn
-        } else {
-            //this.nn = new NeuralNetwork(this.sensors.length * this.inputFactor + 2, Math.floor((this.sensors.length + 2) / 2), 2)
-            const inNodes = this.sensors.length
-            const hiddenNodes = Math.floor((this.sensors.length + 2) / 2)
-            const outputNodes = 2
-            //this.nn = new NeuralNetwork(inNodes, hiddenNodes, outputNodes)
+    /* 
+        initNeuralNet(nn) {
+            if (nn) {
+                //this.nn = nn
+            } else {
+                //this.nn = new NeuralNetwork(this.sensors.length * this.inputFactor + 2, Math.floor((this.sensors.length + 2) / 2), 2)
+                const inNodes = this.sensors.length
+                const hiddenNodes = Math.floor((this.sensors.length + 2) / 2)
+                const outputNodes = 2
+                //this.nn = new NeuralNetwork(inNodes, hiddenNodes, outputNodes)
+            }
         }
-    }
- */
+     */
     kill() {
         this.alive = false;
     }
