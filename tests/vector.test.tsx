@@ -18,3 +18,12 @@ it('vector sub', () => {
     expect(v1.x).toBe(0)
     expect(v1.y).toBe(-10)
 });
+
+it('vector mult', () => {
+    const v1: Vector = new Vector(5, 10)
+    const scalar = 5
+    v1.mult(scalar)
+
+    expect(v1.x).toBe(25)
+    expect(v1.y).toBe(50)
+});

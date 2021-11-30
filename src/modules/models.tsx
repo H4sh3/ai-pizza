@@ -40,10 +40,14 @@ export class Vector {
     }
 
     sub(other: Vector) {
-        this.x += other.x
-        this.y += other.y
+        this.x -= other.x
+        this.y -= other.y
     }
 
+    mult(scalar: number) {
+        this.x *= scalar
+        this.y *= scalar
+    }
 }
 
 export const isVector = (value: any): value is Vector => {
