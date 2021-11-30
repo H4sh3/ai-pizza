@@ -73,3 +73,20 @@ it('vector normalize', () => {
     expect(v2.x).toBe(-0.25)
     expect(v2.y).toBe(1)
 });
+
+
+it('vector heading', () => {
+    let v: Vector = new Vector(10, 0)
+    expect(v.heading()).toBe(0)
+
+    v = new Vector(0, -10)
+    expect(v.heading()).toBe(-90)
+
+    v = new Vector(-10, 0)
+    expect(v.heading()).toBe(180)
+
+    v = new Vector(0, 10)
+    expect(v.heading()).toBe(90)
+});
+
+

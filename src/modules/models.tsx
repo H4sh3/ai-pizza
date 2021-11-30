@@ -1,5 +1,5 @@
 import { NODE_SIZE } from "./const";
-import { degToRad } from "./math";
+import { degToRad, radToDeg } from "./math";
 
 
 export interface Position {
@@ -76,7 +76,9 @@ export class Vector {
         }
     }
 
-
+    heading() {
+        return radToDeg(Math.atan2(this.y, this.x))
+    }
 }
 
 export const isVector = (value: any): value is Vector => {
