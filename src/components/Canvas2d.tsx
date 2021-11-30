@@ -16,7 +16,7 @@ const Canvas2d: React.FC = () => {
     }
     const canvasRef = useRef(null)
 
-    const { getNodes, setNodes, spawnAgent, runGameLoop, getAgents } = useMainState()
+    const { getNodes, getCheckpoints, setNodes, spawnAgent, runGameLoop, getAgents } = useMainState()
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -29,16 +29,10 @@ const Canvas2d: React.FC = () => {
 
         spawnAgent(nodes[0].pos.copy())
 
-        const start = nodes[0]
-        const end = nodes[randInt(1, nodes.length)]
 
-        const path = search(nodes, start, end)
 
-        const checkpoints = getCheckpoints(path)
-
-        drawCheckpoints(checkpoints, context)
     }, [])
-
+    
     const [frameTime, setFrameTime] = useState()
     useEffect(() => {
         let frameId
@@ -48,17 +42,18 @@ const Canvas2d: React.FC = () => {
         const frame = time => {
             setFrameTime(time)
             frameId = requestAnimationFrame(frame)
-
+            
             const timeDelta = time - lastTime
             if (timeDelta < 1000 / 60) return
             lastTime = time
-
+            
             context.fillStyle = "#AAAA99"
             context.fillRect(0, 0, WIDTH, HEIGHT)
-
+            
             const n = getNodes()
             renderNodes(n, context)
             renderStreets(n, context)
+            renderCheckpoints(getCheckpoints(), context)
             renderAgents(getAgents(), context)
             runGameLoop()
         }
@@ -106,7 +101,7 @@ const renderStreets = (nodes: Node[], context) => {
     })
 }
 
-const drawCheckpoints = (checkpoints: Line[], context) => {
+const renderCheckpoints = (checkpoints: Line[], context) => {
     checkpoints.forEach(l => {
         context.strokeStyle = '#00FF00'
         context.beginPath();
@@ -122,7 +117,7 @@ const renderNodes = (nodes: Node[], context) => {
         context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
-        //context.fillText(n.id, n.pos.x, n.pos.y);
+        context.fillText(n.id, n.pos.x, n.pos.y);
     })
 }
 
@@ -155,37 +150,6 @@ const checkpointsJson = (checkpoints: Line[]) => {
     console.log(c)
 }
 
-const getCheckpoints = (path: Node[]): Line[] => {
-    const checkpoints: Line[] = []
 
-    for (let i = 0; i < path.length - 1; i++) {
-        const node = path[i]
-        const nextNode = path[i + 1]
-        Object.keys(node.connections).some(k => {
-            if (node.connections[k] === undefined) return
-
-            if (node.connections[k].startNode === nextNode || node.connections[k].endNode === nextNode) {
-                checkpoints.push(getCheckpoint(node.pos, k))
-                return true
-            }
-        })
-    }
-    return checkpoints
-}
-
-const getCheckpoint = (pos, direction) => {
-    if (direction === "top") {
-        return new Line(pos.x - NODE_SIZE, pos.y - NODE_SIZE, pos.x + NODE_SIZE, pos.y - NODE_SIZE)
-    }
-    if (direction === "right") {
-        return new Line(pos.x + NODE_SIZE, pos.y - NODE_SIZE, pos.x + NODE_SIZE, pos.y + NODE_SIZE)
-    }
-    if (direction === "left") {
-        return new Line(pos.x - NODE_SIZE, pos.y - NODE_SIZE, pos.x - NODE_SIZE, pos.y + NODE_SIZE)
-    }
-    if (direction === "bottom") {
-        return new Line(pos.x - NODE_SIZE, pos.y + NODE_SIZE, pos.x + NODE_SIZE, pos.y + NODE_SIZE)
-    }
-}
 
 export default Canvas2d;

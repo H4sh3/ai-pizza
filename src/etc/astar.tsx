@@ -1,7 +1,7 @@
 
 // a start
 
-import { Node } from "../modules/transformation"
+import { Node } from "../modules/models"
 import priorityQueue from "./prioQueue"
 
 const search = (nodes: Node[], start: Node, end: Node): Node[] => {
