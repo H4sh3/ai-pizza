@@ -27,3 +27,17 @@ it('vector mult', () => {
     expect(v1.x).toBe(25)
     expect(v1.y).toBe(50)
 });
+
+it('vector copy', () => {
+    const v1: Vector = new Vector(5, 10)
+    const v2: Vector = v1.copy()
+    
+    const scalar = 5
+    v2.mult(scalar)
+
+    expect(v1.x).toBe(5)
+    expect(v1.y).toBe(10)
+
+    expect(v2.x).toBe(25)
+    expect(v2.y).toBe(50)
+});

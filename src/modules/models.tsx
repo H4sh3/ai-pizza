@@ -48,6 +48,10 @@ export class Vector {
         this.x *= scalar
         this.y *= scalar
     }
+
+    copy() {
+        return new Vector(this.x, this.y)
+    }
 }
 
 export const isVector = (value: any): value is Vector => {
