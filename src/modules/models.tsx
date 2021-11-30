@@ -1,4 +1,6 @@
 import { NODE_SIZE } from "./const";
+import { degToRad } from "./math";
+
 
 export interface Position {
     x: number,
@@ -51,6 +53,19 @@ export class Vector {
 
     copy() {
         return new Vector(this.x, this.y)
+    }
+
+    rotate(deg: number) {
+        const theta = degToRad(deg);
+
+        const cs = Math.cos(theta);
+        const sn = Math.sin(theta);
+
+        const xt = this.x * cs - this.y * sn;
+        const yt = this.x * sn + this.y * cs;
+
+        this.x = xt
+        this.y = yt
     }
 }
 

@@ -1,5 +1,4 @@
-import { Segment, Vector } from '../src/modules/models'
-import { segmentsMock } from '../src/modules/data'
+import { Vector } from '../src/modules/models'
 
 it('vector add', () => {
     const v1: Vector = new Vector(10, 0)
@@ -40,4 +39,25 @@ it('vector copy', () => {
 
     expect(v2.x).toBe(25)
     expect(v2.y).toBe(50)
+});
+
+it('vector rotate', () => {
+    const v1: Vector = new Vector(10, 0)
+
+    v1.rotate(90)
+    expect(v1.x).toBeCloseTo(0)
+    expect(v1.y).toBeCloseTo(10)
+
+
+    v1.rotate(90)
+    expect(v1.x).toBeCloseTo(-10)
+    expect(v1.y).toBeCloseTo(0)
+
+    v1.rotate(90)
+    expect(v1.x).toBeCloseTo(0)
+    expect(v1.y).toBeCloseTo(-10)
+
+    v1.rotate(90)
+    expect(v1.x).toBeCloseTo(10)
+    expect(v1.y).toBeCloseTo(0)
 });

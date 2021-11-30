@@ -1,4 +1,5 @@
 import { HEIGHT, NODE_SIZE, WIDTH } from "./const";
+import { radToDeg } from "./math";
 import { checkLineIntersection, Edge, Node, Vector } from "./models";
 
 const config = {
@@ -134,10 +135,6 @@ const checkGraphes = (nodes: Node[]) => {
     return graphs
 }
 
-function radians_to_degrees(radians) {
-    var pi = Math.PI;
-    return radians * (180 / pi);
-}
 
 const addEdges = (nodes: Node[], edges: Edge[]) => {
     const canceledNodes = {}
@@ -177,7 +174,7 @@ const addEdge = (n: Node, closest: Node, edges: Edge[]) => {
     })) return
 
     // check if angle to steep
-    let angle = Math.abs(radians_to_degrees(Math.atan2(edgeLine.p2.x - edgeLine.p1.x, edgeLine.p2.y - edgeLine.p1.y)))
+    let angle = Math.abs(radToDeg(Math.atan2(edgeLine.p2.x - edgeLine.p1.x, edgeLine.p2.y - edgeLine.p1.y)))
     if (angle > 90) {
         angle -= 90
     }
