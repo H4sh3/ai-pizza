@@ -39,16 +39,19 @@ export class Vector {
     add(other: Vector) {
         this.x += other.x
         this.y += other.y
+        return this
     }
 
     sub(other: Vector) {
         this.x -= other.x
         this.y -= other.y
+        return this
     }
 
     mult(scalar: number) {
         this.x *= scalar
         this.y *= scalar
+        return this
     }
 
     copy() {
@@ -64,6 +67,7 @@ export class Vector {
         const tmpX = this.x * cs - this.y * sn;
         this.y = this.x * sn + this.y * cs;
         this.x = tmpX
+        return this
     }
 
     normalize() {
@@ -74,6 +78,7 @@ export class Vector {
             this.x /= this.y
             this.y /= this.y
         }
+        return this
     }
 
     heading() {

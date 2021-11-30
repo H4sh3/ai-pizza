@@ -104,3 +104,12 @@ it('vector mag', () => {
     expect(v.mag()).toBeCloseTo(14.14)
 });
 
+
+it('vector chain', () => {
+    let v: Vector = new Vector(10, 10)
+    v.mult(5).rotate(90).sub(new Vector(1, 2))
+
+    expect(v.x).toBe(-51)
+    expect(v.y).toBe(48)
+});
+
