@@ -39,6 +39,11 @@ export class Vector {
         this.y += other.y
     }
 
+    sub(other: Vector) {
+        this.x += other.x
+        this.y += other.y
+    }
+
 }
 
 export const isVector = (value: any): value is Vector => {

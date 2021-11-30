@@ -9,3 +9,12 @@ it('vector add', () => {
     expect(v1.x).toBe(20)
     expect(v1.y).toBe(0)
 });
+
+it('vector sub', () => {
+    const v1: Vector = new Vector(10, 0)
+    const v2: Vector = new Vector(10, 10)
+    v1.sub(v2)
+
+    expect(v1.x).toBe(0)
+    expect(v1.y).toBe(-10)
+});
