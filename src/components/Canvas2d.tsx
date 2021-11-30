@@ -6,6 +6,7 @@ import { transformation, loadData } from "../modules/transformation"
 import search from "../etc/astar"
 import mapgen, { randInt } from "../modules/mapgen"
 import { randomInt } from "crypto"
+import { useMainState } from "../mainState"
 
 
 const Canvas2d: React.FC = () => {
@@ -15,8 +16,7 @@ const Canvas2d: React.FC = () => {
     }
     const canvasRef = useRef(null)
 
-    const [nodes, setNodes] = useState<Node[]>([])
-    const [edges, setEdges] = useState<Edge[]>([])
+    const { getNodes, setNodes } = useMainState()
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -25,9 +25,8 @@ const Canvas2d: React.FC = () => {
         context.fillStyle = "#AAAA99"
         context.fillRect(0, 0, WIDTH, HEIGHT)
 
-        const { nodes, edges } = mapgen()
+        const { nodes } = mapgen()
         setNodes(nodes)
-        setEdges(edges)
 
         const start = nodes[0]
         const end = nodes[randInt(1, nodes.length)]
@@ -44,12 +43,13 @@ const Canvas2d: React.FC = () => {
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
 
-        drawNodes(nodes, context)
-        drawStreets(nodes, context)
+        const n = getNodes()
+        drawNodes(n, context)
+        drawStreets(n, context)
 
         // drawEdges(nodes, context)
         // drawEdgeEdges(edges, context)
-    }, [nodes, edges])
+    }, [getNodes])
 
     return <canvas ref={canvasRef} {...props} />
 }

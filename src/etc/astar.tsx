@@ -46,7 +46,6 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
         route.push(next)
 
         while (next.id !== start.id) {
-            console.log(next)
             next = prevNode[next.id]
             route.push(next)
         }

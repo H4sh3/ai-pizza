@@ -68,5 +68,8 @@
     "webpack-dev-server": "^4.5.0",
     "webpack-merge": "^5.8.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "immer": "^9.0.7",
+    "zustand": "^3.6.5"
+  }
 }

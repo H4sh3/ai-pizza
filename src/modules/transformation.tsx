@@ -115,9 +115,7 @@ const getEdges = (nodes: Map<string, Node>, segments: Segment[]) => {
     segments.forEach(s => {
         const node1 = nodes.get(genPosUUID(s.start.x, s.start.y))
         const node2 = nodes.get(genPosUUID(s.end.x, s.end.y))
-        if (node1.id === 42 || node2.id === 42) {
-            console.log(node1, node2)
-        }
+
         edges.push(new Edge(node1, node2))
     })
 
