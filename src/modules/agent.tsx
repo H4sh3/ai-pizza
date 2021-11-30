@@ -1,5 +1,5 @@
 import { map } from "./math";
-import { Vector } from "./models";
+import { Line, Vector } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
 
 export interface AgentSettings {
@@ -33,6 +33,7 @@ class Agent {
     vel: Vector
     dir: Vector
     sensors: Sensor[]
+    checkpoints: Line[]
     nn: NeuralNetwork
 
     constructor(settings: AgentSettings, nn?: NeuralNetwork) {

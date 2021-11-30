@@ -13,8 +13,7 @@ interface State {
     readonly nodes: Node[],
     readonly edges: Edge[],
     readonly agents: Agent[],
-    readonly roads: Line[]
-    readonly checkpoints: Line[],
+    readonly roads: Line[],
     readonly intersections: Vector[]
 }
 
@@ -45,9 +44,6 @@ export const useMainState = create(
             getIntersections: () => {
                 return get().intersections;
             },
-            getCheckpoints: () => {
-                return get().checkpoints;
-            },
             spawnAgent: () => {
                 set((state) => produce(state, draftState => {
 
@@ -75,9 +71,8 @@ export const useMainState = create(
                     } else if (startNode.connections.bottom !== undefined && startNode.connections.bottom.getOther(startNode.id).id === s2.id) {
                         dirY = 1
                     }
-                    draftState.checkpoints = getCheckpoints(path)
+                    const checkpoints = getCheckpoints(path)
 
-                    // add agent with route
                     const settings: AgentSettings = {
                         dirX,
                         dirY,
@@ -91,6 +86,7 @@ export const useMainState = create(
                         }
                     }
                     const agent = new Agent(settings)
+                    agent.checkpoints = checkpoints
                     draftState.agents = [...draftState.agents, agent]
                 }));
             },
@@ -98,9 +94,9 @@ export const useMainState = create(
                 set((state) => produce(state, draftState => {
                     draftState.agents.filter(a => a.alive).forEach(a => {
                         const roadIntersections = getSensorIntersectionsWith(a, state.roads)
-                        const checkpointIntersections = getSensorIntersectionsWith(a, state.checkpoints)
+                        const checkpointIntersections = getSensorIntersectionsWith(a, a.checkpoints)
                         const inputs = [...roadIntersections, ...checkpointIntersections]
-                        updateAgent(a, state.roads, state.checkpoints)
+                        updateAgent(a, state.roads, a.checkpoints)
                         a.update(inputs)
                     })
                 }));
