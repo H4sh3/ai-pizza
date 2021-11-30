@@ -1,215 +1,76 @@
-import { Segment } from "./models";
-
-import { NODE_SIZE } from './const'
-
-export class Vector {
-    x: number
-    y: number
-
-    constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-
-    dist(other: Vector) {
-        return Math.sqrt(Math.pow(this.x - other.x, 2) + Math.pow(this.y - other.y, 2));
-    }
-}
-
-class Line {
-    p1: Vector
-    p2: Vector
-
-    constructor(x1, y1, x2, y2) {
-        this.p1 = new Vector(x1, y1)
-        this.p2 = new Vector(x2, y2)
-    }
-}
+import { Edge, Segment, SegmentJson, Node } from "./models";
 
 
-export class Edge {
-    id: number
-    startNode: Node
-    endNode: Node
 
-    constructor(start, end) {
-        this.startNode = start
-        this.endNode = end
-    }
-
-    getOther(id) {
-        if (this.startNode.id === id) {
-            return this.endNode
-        } else {
-            return this.startNode
-        }
-    }
-
-    exchangeNode(id, node) {
-        if (this.startNode.id === id) {
-            this.startNode = node
-        } else {
-            this.endNode = node
-        }
-    }
-}
-
-export class Node {
-    id: number
-    pos: Vector
-    connections: {
-        left: Edge | undefined,
-        right: Edge | undefined
-        top: Edge | undefined,
-        bottom: Edge | undefined
-    }
-
-    getNeightbours() {
-        const n = []
-        Object.keys(this.connections).forEach(direction => {
-            if (this.connections[direction] !== undefined) {
-                if (this.connections[direction].startNode.id === this.id) {
-                    n.push(this.connections[direction].endNode)
-                } else {
-                    n.push(this.connections[direction].startNode)
-                }
-            }
+export const loadData = (input: SegmentJson[]): Segment[] => {
+    const segments = new Map<number, Segment>();
+    input.forEach(s => {
+        segments.set(s.id, {
+            id: s.id,
+            start: s.start,
+            end: s.end,
+            forward: [],
+            backward: [],
         })
-        return n
-    }
+    })
 
-    getLeft() {
-        return this.getDirection("left")
-    }
-    getRight() {
-        return this.getDirection("right")
-    }
-    getTop() {
-        return this.getDirection("top")
-    }
-    getBottom() {
-        return this.getDirection("bottom")
-    }
+    input.forEach(s => {
+        const segment = segments.get(s.id)
+        segment.forward = s.forward.map(f => segments.get(segments.get(f).id))
+        segment.backward = s.backward.map(f => segments.get(segments.get(f).id))
+    })
 
-    getDirection(direction) {
-        if (this.connections[direction] === undefined) {
-            return { node: undefined, edgeId: undefined }
+    let tmp: Segment[] = []
+    segments.forEach((s, k) => {
+        tmp.push(s)
+    })
+
+    let minX = 0
+    let minY = 0
+
+    tmp.forEach(s => {
+        if (s.start.x < minX) {
+            minX = s.start.x
         }
-
-        if (this.connections[direction].startNode.id === this.id) {
-            return { node: this.connections[direction].endNode, edgeId: this.connections[direction].id }
-        } else {
-            return { node: this.connections[direction].startNode, edgeId: this.connections[direction].id }
+        if (s.end.x < minX) {
+            minX = s.end.x
         }
-    }
-
-    constructor(id: number, x: number, y: number) {
-        this.id = id
-        this.pos = new Vector(x, y)
-        this.connections = {
-            left: undefined,
-            right: undefined,
-            top: undefined,
-            bottom: undefined,
+        if (s.start.y < minY) {
+            minY = s.start.y
         }
-    }
+        if (s.end.y < minY) {
+            minY = s.end.y
+        }
+    })
 
-    getLines(): Line[] {
-        const lines: Line[] = []
-        const usedEdges = []
-        Object.keys(this.connections).forEach(direction => {
-            const { node, edgeId } = this.getDirection(direction)
-            if (node === undefined) {
-                if (direction === "top") {
-                    const x1 = this.pos.x - NODE_SIZE
-                    const y1 = this.pos.y - NODE_SIZE
-                    const x2 = this.pos.x + NODE_SIZE
-                    const y2 = this.pos.y - NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
-                }
-                if (direction === "right") {
-                    const x1 = this.pos.x + NODE_SIZE
-                    const y1 = this.pos.y - NODE_SIZE
-                    const x2 = this.pos.x + NODE_SIZE
-                    const y2 = this.pos.y + NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
-                }
-                if (direction === "bottom") {
-                    const x1 = this.pos.x - NODE_SIZE
-                    const y1 = this.pos.y + NODE_SIZE
-                    const x2 = this.pos.x + NODE_SIZE
-                    const y2 = this.pos.y + NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
-                }
-                if (direction === "left") {
-                    const x1 = this.pos.x - NODE_SIZE
-                    const y1 = this.pos.y - NODE_SIZE
-                    const x2 = this.pos.x - NODE_SIZE
-                    const y2 = this.pos.y + NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
-                }
-                return
-            }
+    minX = Math.abs(minX)
+    minY = Math.abs(minY)
 
-            if (usedEdges.includes(edgeId)) return
+    tmp.forEach(s => {
+        s.start.x += minX
+        s.start.y += minY
+        s.end.x += minX
+        s.end.y += minY
+    })
 
-            usedEdges.push(edgeId)
+    const faktor = 0.3
+    tmp.forEach(s => {
+        s.start.x *= faktor
+        s.start.y *= faktor
+        s.end.x *= faktor
+        s.end.y *= faktor
+        s.start.x += 100
+        s.start.y += 100
+        s.end.x += 100
+        s.end.y += 100
 
-            if (direction === "top") {
-                const x1 = this.pos.x - NODE_SIZE
-                const y1 = this.pos.y - NODE_SIZE
-                const x2 = node.pos.x - NODE_SIZE
-                const y2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
+        s.start.x = Math.round(s.start.x)
+        s.start.y = Math.round(s.start.y)
+        s.end.x = Math.round(s.end.x)
+        s.end.y = Math.round(s.end.y)
+    })
 
-                const x1_2 = this.pos.x + NODE_SIZE
-                const y1_2 = this.pos.y - NODE_SIZE
-                const x2_2 = node.pos.x + NODE_SIZE
-                const y2_2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-            if (direction === "left") {
-                const x1 = this.pos.x - NODE_SIZE
-                const y1 = this.pos.y - NODE_SIZE
-                const x2 = node.pos.x + NODE_SIZE
-                const y2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
-
-                const x1_2 = this.pos.x - NODE_SIZE
-                const y1_2 = this.pos.y + NODE_SIZE
-                const x2_2 = node.pos.x + NODE_SIZE
-                const y2_2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-            if (direction === "right") {
-                const x1 = this.pos.x + NODE_SIZE
-                const y1 = this.pos.y - NODE_SIZE
-                const x2 = node.pos.x - NODE_SIZE
-                const y2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
-
-                const x1_2 = this.pos.x + NODE_SIZE
-                const y1_2 = this.pos.y + NODE_SIZE
-                const x2_2 = node.pos.x - NODE_SIZE
-                const y2_2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-            if (direction === "bottom") {
-                const x1 = this.pos.x - NODE_SIZE
-                const y1 = this.pos.y + NODE_SIZE
-                const x2 = node.pos.x - NODE_SIZE
-                const y2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
-
-                const x1_2 = this.pos.x + NODE_SIZE
-                const y1_2 = this.pos.y + NODE_SIZE
-                const x2_2 = node.pos.x + NODE_SIZE
-                const y2_2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-        })
-        return lines
-    }
+    return tmp
 }
 
 
@@ -223,7 +84,7 @@ export const transformation = (segments: Segment[]): { nodes: Node[], edges: Edg
     relateNotes(edges)
 
     const nArr = Array.from(nodes.values())
-    nArr.filter(n => n.id == 0)[0].id = -1
+    //nArr.filter(n => n.id == 0)[0].id = -1
 
     return { nodes: removeSimple(nArr), edges }
 }
@@ -254,6 +115,9 @@ const getEdges = (nodes: Map<string, Node>, segments: Segment[]) => {
     segments.forEach(s => {
         const node1 = nodes.get(genPosUUID(s.start.x, s.start.y))
         const node2 = nodes.get(genPosUUID(s.end.x, s.end.y))
+        if (node1.id === 42 || node2.id === 42) {
+            console.log(node1, node2)
+        }
         edges.push(new Edge(node1, node2))
     })
 
@@ -280,14 +144,13 @@ const removeSimple = (nodes: Node[]) => {
             if (e.connections.left === undefined) return
             if (e.connections.right === undefined) return
 
-            console.log(e.id)
             e.connections.left.exchangeNode(e.id, e.connections.right.getOther(e.id))
             e.connections.right.exchangeNode(e.id, e.connections.left.getOther(e.id))
 
             rmId = e.id
             changed = true
         })
-        
+
         if (!changed) {
             run = false
         }
@@ -313,7 +176,7 @@ const removeSimple = (nodes: Node[]) => {
             rmId = e.id
             changed = true
         })
-        
+
         if (!changed) {
             run = false
         }
@@ -322,12 +185,16 @@ const removeSimple = (nodes: Node[]) => {
     return nodes
 }
 
+export const absoluteDist = (node1: Node, node2: Node, axis: string) => {
+    return Math.abs(Math.abs(node1.pos[axis]) - Math.abs(node2.pos[axis]))
+}
+
 const relateNotes = (edges: Edge[]) => {
     edges.forEach(e => {
         const { startNode, endNode } = e
         // locate endNode relativ to startNode
-        const diffX = Math.abs(Math.abs(startNode.pos.x) - Math.abs(endNode.pos.x))
-        const diffY = Math.abs(Math.abs(startNode.pos.y) - Math.abs(endNode.pos.y))
+        const diffX = absoluteDist(startNode, endNode, "x")
+        const diffY = absoluteDist(startNode, endNode, "y")
 
         if (diffX > diffY) {
             if (endNode.pos.x < startNode.pos.x) { // left

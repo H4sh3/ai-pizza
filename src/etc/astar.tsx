@@ -2,7 +2,6 @@
 // a start
 
 import { Node } from "../modules/transformation"
-import HashMap from "./hashmap"
 import priorityQueue from "./prioQueue"
 
 const search = (nodes: Node[], start: Node, end: Node): Node[] => {
@@ -27,7 +26,6 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
         }
 
         current.getNeightbours().forEach(neighbour => {
-            //console.log({ neighbour })
             if (closeList[neighbour.id]) return // checked already
             const newCost: number = closeList[current.id] + current.pos.dist(neighbour.pos)
             closeList[neighbour.id] = newCost
@@ -43,15 +41,20 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
     //return all
 
     const route = [end]
-    let next = prevNode[end.id]
-    route.unshift(next)
+    try {
+        let next = prevNode[end.id]
+        route.push(next)
 
-    while (next.id !== start.id) {
-        next = prevNode[next.id]
-        route.unshift(next)
+        while (next.id !== start.id) {
+            console.log(next)
+            next = prevNode[next.id]
+            route.push(next)
+        }
+        return route
+    } catch {
+        return []
     }
 
-    return route
 }
 
 export default search
