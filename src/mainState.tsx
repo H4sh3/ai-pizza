@@ -97,9 +97,11 @@ export const useMainState = create(
             runGameLoop: () => {
                 set((state) => produce(state, draftState => {
                     draftState.agents.filter(a => a.alive).forEach(a => {
-                        a.update(0)
+                        const roadIntersections = getSensorIntersectionsWith(a, state.roads)
+                        const checkpointIntersections = getSensorIntersectionsWith(a, state.checkpoints)
+                        const inputs = [...roadIntersections, ...checkpointIntersections]
                         updateAgent(a, state.roads, state.checkpoints)
-                        draftState.intersections = getSensorCollisionsWith(a, state.roads)
+                        a.update(inputs)
                     })
                 }));
             },
@@ -181,7 +183,7 @@ const getCheckpoint = (pos, direction) => {
     }
 }
 
-function getSensorCollisionsWith(agent: Agent, otherObjects: Line[]) {
+function getSensorIntersectionsWith(agent: Agent, otherObjects: Line[]) {
     const inputs = []
     const intersectionPoints = []
     agent.sensors.forEach(sensor => {
@@ -206,7 +208,7 @@ function getSensorCollisionsWith(agent: Agent, otherObjects: Line[]) {
         }
     })
 
-    return intersectionPoints
+    return inputs
 }
 
 function transformSensor(s: Sensor, agent: Agent) {
