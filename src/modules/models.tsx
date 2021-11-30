@@ -61,12 +61,22 @@ export class Vector {
         const cs = Math.cos(theta);
         const sn = Math.sin(theta);
 
-        const xt = this.x * cs - this.y * sn;
-        const yt = this.x * sn + this.y * cs;
-
-        this.x = xt
-        this.y = yt
+        const tmpX = this.x * cs - this.y * sn;
+        this.y = this.x * sn + this.y * cs;
+        this.x = tmpX
     }
+
+    normalize() {
+        if (Math.abs(this.x) > Math.abs(this.y)) {
+            this.y /= this.x
+            this.x /= this.x
+        } else {
+            this.x /= this.y
+            this.y /= this.y
+        }
+    }
+
+
 }
 
 export const isVector = (value: any): value is Vector => {

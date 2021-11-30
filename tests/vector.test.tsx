@@ -30,7 +30,7 @@ it('vector mult', () => {
 it('vector copy', () => {
     const v1: Vector = new Vector(5, 10)
     const v2: Vector = v1.copy()
-    
+
     const scalar = 5
     v2.mult(scalar)
 
@@ -60,4 +60,16 @@ it('vector rotate', () => {
     v1.rotate(90)
     expect(v1.x).toBeCloseTo(10)
     expect(v1.y).toBeCloseTo(0)
+});
+
+it('vector normalize', () => {
+    const v1: Vector = new Vector(10, 5)
+    v1.normalize()
+    expect(v1.x).toBe(1)
+    expect(v1.y).toBe(0.5)
+
+    const v2: Vector = new Vector(-5, 20)
+    v2.normalize()
+    expect(v2.x).toBe(-0.25)
+    expect(v2.y).toBe(1)
 });
