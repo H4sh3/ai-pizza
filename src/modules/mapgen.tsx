@@ -1,6 +1,5 @@
 import { HEIGHT, NODE_SIZE, WIDTH } from "./const";
-import { checkLineIntersection, Edge, isVector, Line, Node, Vector } from "./models";
-import { absoluteDist } from "./transformation";
+import { checkLineIntersection, Edge, Node, Vector } from "./models";
 
 const config = {
     width: WIDTH,
@@ -294,5 +293,9 @@ export function randInt(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
+
+export const absoluteDist = (node1: Node, node2: Node, axis: string) => {
+    return Math.abs(Math.abs(node1.pos[axis]) - Math.abs(node2.pos[axis]))
+}
 
 export default mapgen
