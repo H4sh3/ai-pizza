@@ -2,8 +2,8 @@ import create from 'zustand';
 import { combine } from 'zustand/middleware';
 import produce from 'immer';
 import { Edge, isVector, Line, Node, Vector } from './modules/models';
-import Agent, { AgentSettings } from './modules/agent';
-import { checkLineIntersection } from './modules/math'
+import Agent, { AgentSettings, Sensor } from './modules/agent';
+import { checkLineIntersection, map } from './modules/math'
 import { randInt } from './modules/mapgen';
 import search from './etc/astar';
 import { NODE_SIZE } from './modules/const';
@@ -14,7 +14,8 @@ interface State {
     readonly edges: Edge[],
     readonly agents: Agent[],
     readonly roads: Line[]
-    readonly checkpoints: Line[]
+    readonly checkpoints: Line[],
+    readonly intersections: Vector[]
 }
 
 export const useMainState = create(
@@ -25,6 +26,7 @@ export const useMainState = create(
             agents: [],
             roads: [],
             checkpoints: [],
+            intersections: []
 
         } as State,
         (set, get) => ({
@@ -40,7 +42,9 @@ export const useMainState = create(
             getNodes: () => {
                 return get().nodes;
             },
-
+            getIntersections: () => {
+                return get().intersections;
+            },
             getCheckpoints: () => {
                 return get().checkpoints;
             },
@@ -64,11 +68,11 @@ export const useMainState = create(
                     let dirY = 0
                     if (startNode.connections.left !== undefined && startNode.connections.left.getOther(startNode.id).id === s2.id) {
                         dirX = -1
-                    } else if (startNode.connections.right !== undefined &&startNode.connections.right.getOther(startNode.id).id === s2.id) {
+                    } else if (startNode.connections.right !== undefined && startNode.connections.right.getOther(startNode.id).id === s2.id) {
                         dirX = 1
-                    } else if (startNode.connections.top !== undefined &&startNode.connections.top.getOther(startNode.id).id === s2.id) {
+                    } else if (startNode.connections.top !== undefined && startNode.connections.top.getOther(startNode.id).id === s2.id) {
                         dirY = -1
-                    } else if (startNode.connections.bottom !== undefined &&startNode.connections.bottom.getOther(startNode.id).id === s2.id) {
+                    } else if (startNode.connections.bottom !== undefined && startNode.connections.bottom.getOther(startNode.id).id === s2.id) {
                         dirY = 1
                     }
                     draftState.checkpoints = getCheckpoints(path)
@@ -79,7 +83,12 @@ export const useMainState = create(
                         dirY,
                         steerRange: 15,
                         velReduction: 1.25,
-                        startPos: startNode.pos.copy()
+                        startPos: startNode.pos.copy(),
+                        sensorSettings: {
+                            num: 5,
+                            len: 25,
+                            fov: 120
+                        }
                     }
                     const agent = new Agent(settings)
                     draftState.agents = [...draftState.agents, agent]
@@ -90,6 +99,7 @@ export const useMainState = create(
                     draftState.agents.filter(a => a.alive).forEach(a => {
                         a.update(0)
                         updateAgent(a, state.roads, state.checkpoints)
+                        draftState.intersections = getSensorCollisionsWith(a, state.roads)
                     })
                 }));
             },
@@ -169,4 +179,39 @@ const getCheckpoint = (pos, direction) => {
     if (direction === "bottom") {
         return new Line(pos.x - NODE_SIZE, pos.y + NODE_SIZE, pos.x + NODE_SIZE, pos.y + NODE_SIZE)
     }
+}
+
+function getSensorCollisionsWith(agent: Agent, otherObjects: Line[]) {
+    const inputs = []
+    const intersectionPoints = []
+    agent.sensors.forEach(sensor => {
+        let closest = Infinity
+        let closestIntersectionPoint: boolean | Vector = false
+        otherObjects.forEach(line => {
+            const sensorLine = transformSensor(sensor, agent)
+            const intersectionPoint = checkLineIntersection(sensorLine, line)
+            if (isVector(intersectionPoint)) {
+                if (agent.pos.dist(intersectionPoint) < closest) {
+                    closestIntersectionPoint = intersectionPoint
+                    closest = agent.pos.dist(intersectionPoint)
+                }
+            }
+        })
+
+        if (isVector(closestIntersectionPoint)) {
+            intersectionPoints.push(closestIntersectionPoint)
+            inputs.push(map(closestIntersectionPoint.dist(agent.pos), 0, agent.settings.sensorSettings.len, 0, 1))
+        } else {
+            inputs.push(1)
+        }
+    })
+
+    return intersectionPoints
+}
+
+function transformSensor(s: Sensor, agent: Agent) {
+    const current = s.pos.copy()
+    current.rotate(s.rot + agent.acc.heading())
+    current.add(agent.pos)
+    return new Line(current.x, current.y, agent.pos.x, agent.pos.y)
 }

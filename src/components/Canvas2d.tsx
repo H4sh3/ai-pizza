@@ -16,23 +16,14 @@ const Canvas2d: React.FC = () => {
     }
     const canvasRef = useRef(null)
 
-    const { getNodes, getCheckpoints, setNodes, spawnAgent, runGameLoop, getAgents } = useMainState()
+    const { getNodes, getCheckpoints, setNodes, getIntersections, runGameLoop, getAgents, spawnAgent } = useMainState()
 
     useEffect(() => {
-        const canvas = canvasRef.current
-        const context = canvas.getContext('2d')
-
-
-
         const { nodes } = mapgen()
         setNodes(nodes)
-
-        spawnAgent(nodes[0].pos.copy())
-
-
-
+        spawnAgent()
     }, [])
-    
+
     const [frameTime, setFrameTime] = useState()
     useEffect(() => {
         let frameId
@@ -42,19 +33,20 @@ const Canvas2d: React.FC = () => {
         const frame = time => {
             setFrameTime(time)
             frameId = requestAnimationFrame(frame)
-            
+
             const timeDelta = time - lastTime
             if (timeDelta < 1000 / 60) return
             lastTime = time
-            
+
             context.fillStyle = "#AAAA99"
             context.fillRect(0, 0, WIDTH, HEIGHT)
-            
+
             const n = getNodes()
             renderNodes(n, context)
             renderStreets(n, context)
             renderCheckpoints(getCheckpoints(), context)
             renderAgents(getAgents(), context)
+            renderSensorIntersections(getIntersections(), context)
             runGameLoop()
         }
 
@@ -126,6 +118,17 @@ const renderAgents = (agents: Agent[], context) => {
     agents.forEach(a => {
         context.fillStyle = "#00FFFF"
         context.fillRect(a.pos.x, a.pos.y, NODE_SIZE * 2, NODE_SIZE * 0.5)
+        context.fillStyle = "#000000"
+        context.font = "30px Arial";
+        //context.fillText(n.id, n.pos.x, n.pos.y);
+    })
+}
+
+
+const renderSensorIntersections = (intersections: Vector[], context) => {
+    intersections.forEach(i => {
+        context.fillStyle = "#FF0000"
+        context.fillRect(i.x, i.y, NODE_SIZE * 2, NODE_SIZE * 2)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
         //context.fillText(n.id, n.pos.x, n.pos.y);

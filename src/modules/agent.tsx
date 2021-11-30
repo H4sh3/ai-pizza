@@ -7,10 +7,17 @@ export interface AgentSettings {
     dirY: number,
     velReduction: number,
     steerRange: number,
-    startPos: Vector
+    startPos: Vector,
+    sensorSettings: SensorSettings
 }
 
-interface Sensor {
+export interface SensorSettings {
+    fov: number,
+    num: number,
+    len: number
+}
+
+export interface Sensor {
     rot: number,
     pos: Vector
 }
@@ -37,6 +44,7 @@ class Agent {
         this.alive = true
         this.isBest = false
         this.reachedCheckpoints = 0
+        this.initSensors(settings.sensorSettings)
     }
 
     reset() {
