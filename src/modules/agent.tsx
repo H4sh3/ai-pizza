@@ -1,6 +1,6 @@
 import { map } from "./math";
 import { Vector } from "./models";
-
+import NeuralNetwork from "../thirdparty/nn"
 
 export interface AgentSettings {
     dirX: number,
@@ -33,7 +33,14 @@ class Agent {
     vel: Vector
     dir: Vector
     sensors: Sensor[]
-    constructor(settings) {
+    nn: NeuralNetwork
+
+    constructor(settings, nn) {
+        if (nn) {
+            this.nn = nn.copy()
+        } else {
+            this.nn = new NeuralNetwork(10, 4, 2)
+        }
         this.pos = settings.startPos.copy();
 
         this.settings = settings
@@ -65,7 +72,7 @@ class Agent {
         }
 
     }
-
+/* 
     initNeuralNet(nn) {
         if (nn) {
             //this.nn = nn
@@ -77,7 +84,7 @@ class Agent {
             //this.nn = new NeuralNetwork(inNodes, hiddenNodes, outputNodes)
         }
     }
-
+ */
     kill() {
         this.alive = false;
     }
@@ -87,7 +94,7 @@ class Agent {
     }
 
     update(input) {
-        const output = [0.5, 1] //this.nn.predict(input)
+        const output = this.nn.predict(input)
         const velMag = this.vel.mag()
 
         const steer = map(output[0], 0, 1, -this.settings.steerRange, this.settings.steerRange)

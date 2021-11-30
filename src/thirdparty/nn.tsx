@@ -218,3 +218,5 @@ function randomGaussian() {
 
   return y1 * sd;
 };
+
+export default NeuralNetwork;
