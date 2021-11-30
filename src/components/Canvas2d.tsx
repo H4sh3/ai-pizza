@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
-import { segmentsMock420 } from "../modules/data"
 import { Node, Line, Edge, Vector } from "../modules/models"
-import { transformation, loadData } from "../modules/transformation"
 import search from "../etc/astar"
 import mapgen, { randInt } from "../modules/mapgen"
 import { randomInt } from "crypto"
 import { useMainState } from "../mainState"
+import { request } from "https"
+import Agent from "../modules/agent"
 
 
 const Canvas2d: React.FC = () => {
@@ -16,17 +16,18 @@ const Canvas2d: React.FC = () => {
     }
     const canvasRef = useRef(null)
 
-    const { getNodes, setNodes } = useMainState()
+    const { getNodes, setNodes, spawnAgent, runGameLoop, getAgents } = useMainState()
 
     useEffect(() => {
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
 
-        context.fillStyle = "#AAAA99"
-        context.fillRect(0, 0, WIDTH, HEIGHT)
+
 
         const { nodes } = mapgen()
         setNodes(nodes)
+
+        spawnAgent(nodes[0].pos.copy())
 
         const start = nodes[0]
         const end = nodes[randInt(1, nodes.length)]
@@ -38,20 +39,32 @@ const Canvas2d: React.FC = () => {
         drawCheckpoints(checkpoints, context)
     }, [])
 
+    const [frameTime, setFrameTime] = useState()
     useEffect(() => {
-        // background        
+        let frameId
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
+        const frame = time => {
+            setFrameTime(time)
+            frameId = requestAnimationFrame(frame)
 
-        const n = getNodes()
-        drawNodes(n, context)
-        drawStreets(n, context)
+            context.fillStyle = "#AAAA99"
+            context.fillRect(0, 0, WIDTH, HEIGHT)
+    
+            const n = getNodes()
+            renderNodes(n, context)
+            renderStreets(n, context)
+            renderAgents(getAgents(), context)
+            runGameLoop()
+        }
 
-        // drawEdges(nodes, context)
-        // drawEdgeEdges(edges, context)
-    }, [getNodes])
+        requestAnimationFrame(frame)
+        return () => cancelAnimationFrame(frameId)
+    }, [])
 
-    return <canvas ref={canvasRef} {...props} />
+    return <div>
+        <canvas ref={canvasRef} {...props} />
+    </div>
 }
 
 const drawEdgeEdges = (edges: Edge[], context) => {
@@ -74,7 +87,7 @@ const drawEdges = (nodes: Node[], context) => {
     })
 }
 
-const drawStreets = (nodes: Node[], context) => {
+const renderStreets = (nodes: Node[], context) => {
     context.strokeStyle = '#000000'
     let lines = []
     nodes.forEach(n => {
@@ -98,10 +111,21 @@ const drawCheckpoints = (checkpoints: Line[], context) => {
     })
 }
 
-const drawNodes = (nodes: Node[], context) => {
+const renderNodes = (nodes: Node[], context) => {
     nodes.forEach(n => {
         context.fillStyle = n.color
         context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
+        context.fillStyle = "#000000"
+        context.font = "30px Arial";
+        //context.fillText(n.id, n.pos.x, n.pos.y);
+    })
+}
+
+
+const renderAgents = (agents: Agent[], context) => {
+    agents.forEach(a => {
+        context.fillStyle = "#00FFFF"
+        context.fillRect(a.pos.x, a.pos.y, NODE_SIZE * 2, NODE_SIZE * 0.5)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
         //context.fillText(n.id, n.pos.x, n.pos.y);

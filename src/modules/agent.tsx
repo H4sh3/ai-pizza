@@ -2,11 +2,12 @@ import { map } from "./math";
 import { Vector } from "./models";
 
 
-interface AgentSettings {
+export interface AgentSettings {
     dirX: number,
     dirY: number,
     velReduction: number,
-    steerRange: number
+    steerRange: number,
+    startPos: Vector
 }
 
 interface Sensor {
@@ -26,7 +27,7 @@ class Agent {
     dir: Vector
     sensors: Sensor[]
     constructor(settings) {
-        this.pos = settings.start.copy();
+        this.pos = settings.startPos.copy();
 
         this.settings = settings
 
@@ -78,7 +79,7 @@ class Agent {
     }
 
     update(input) {
-        const output = [0.5, 0.5] //this.nn.predict(input)
+        const output = [0.5, 1] //this.nn.predict(input)
         const velMag = this.vel.mag()
 
         const steer = map(output[0], 0, 1, -this.settings.steerRange, this.settings.steerRange)
@@ -109,3 +110,5 @@ function getFRoll(vel) {
     const cRoll = 0.05
     return vel.copy().mult(-cRoll)
 }
+
+export default Agent
