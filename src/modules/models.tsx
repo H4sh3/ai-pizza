@@ -79,6 +79,10 @@ export class Vector {
     heading() {
         return radToDeg(Math.atan2(this.y, this.x))
     }
+
+    mag() {
+        return Math.sqrt((this.x * this.x) + (this.y * this.y))
+    }
 }
 
 export const isVector = (value: any): value is Vector => {

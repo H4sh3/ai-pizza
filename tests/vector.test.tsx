@@ -90,3 +90,17 @@ it('vector heading', () => {
 });
 
 
+it('vector mag', () => {
+    let v: Vector = new Vector(10, 10)
+    expect(v.mag()).toBeCloseTo(14.14)
+
+    v = new Vector(-10, 10)
+    expect(v.mag()).toBeCloseTo(14.14)
+
+    v = new Vector(10, -10)
+    expect(v.mag()).toBeCloseTo(14.14)
+
+    v = new Vector(-10, -10)
+    expect(v.mag()).toBeCloseTo(14.14)
+});
+
