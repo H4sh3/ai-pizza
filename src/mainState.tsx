@@ -7,14 +7,23 @@ import { checkLineIntersection, map } from './modules/math'
 import { randInt } from './modules/mapgen';
 import search from './etc/astar';
 import { NODE_SIZE } from './modules/const';
-import { randomInt } from 'crypto';
+import NeuralNetwork from './thirdparty/nn';
 
 interface State {
     readonly nodes: Node[],
     readonly edges: Edge[],
     readonly agents: Agent[],
     readonly roads: Line[],
-    readonly intersections: Vector[]
+    readonly intersections: Vector[],
+    readonly bestNeuralNet: NeuralNetwork,
+    readonly mostCheckpoints: number,
+    readonly running: boolean,
+    readonly iteration: number,
+    readonly popSize: number,
+    readonly pretrain: boolean,
+    readonly pretrainEpoch: number,
+    readonly checkpoints: Line[] | undefined,
+    readonly startPos: Vector
 }
 
 export const useMainState = create(
@@ -25,8 +34,15 @@ export const useMainState = create(
             agents: [],
             roads: [],
             checkpoints: [],
-            intersections: []
-
+            intersections: [],
+            bestNeuralNet: new NeuralNetwork(0, 0, 0),
+            mostCheckpoints: 0,
+            running: true,
+            iteration: 0,
+            popSize: 1,
+            pretrain: true,
+            pretrainEpoch: 0,
+            startPos: new Vector(0, 0)
         } as State,
         (set, get) => ({
             setNodes: (nodes: Node[]) => {
@@ -44,6 +60,10 @@ export const useMainState = create(
             getIntersections: () => {
                 return get().intersections;
             },
+            getCheckpoints: () => {
+                return get().checkpoints;
+            },
+
             spawnAgent: () => {
                 set((state) => produce(state, draftState => {
 
@@ -72,13 +92,16 @@ export const useMainState = create(
                         dirY = 1
                     }
                     const checkpoints = getCheckpoints(path)
-
+                    if (draftState.checkpoints.length === 0) {
+                        draftState.checkpoints = checkpoints
+                        draftState.startPos = startNode.pos.copy()
+                    }
                     const settings: AgentSettings = {
                         dirX,
                         dirY,
                         steerRange: 15,
                         velReduction: 1.25,
-                        startPos: startNode.pos.copy(),
+                        startPos: draftState.startPos.copy(),
                         sensorSettings: {
                             num: 5,
                             len: 25,
@@ -86,19 +109,73 @@ export const useMainState = create(
                         }
                     }
                     const agent = new Agent(settings)
-                    agent.checkpoints = checkpoints
+
+
                     draftState.agents = [...draftState.agents, agent]
                 }));
             },
             runGameLoop: () => {
                 set((state) => produce(state, draftState => {
-                    draftState.agents.filter(a => a.alive).forEach(a => {
-                        const roadIntersections = getSensorIntersectionsWith(a, state.roads)
-                        const checkpointIntersections = getSensorIntersectionsWith(a, a.checkpoints)
-                        const inputs = [...roadIntersections, ...checkpointIntersections]
-                        updateAgent(a, state.roads, a.checkpoints)
-                        a.update(inputs)
-                    })
+                    const evaluate = () => {
+                        // eval
+                        draftState.iteration = 0
+                        draftState.agents.sort((a, b) => a.reachedCheckpoints > b.reachedCheckpoints ? -1 : 0)
+
+                        const mostCheckpoints = state.agents[0].reachedCheckpoints
+                        if (mostCheckpoints > state.mostCheckpoints) {
+                            console.log(mostCheckpoints)
+                            draftState.mostCheckpoints = mostCheckpoints
+                            draftState.bestNeuralNet = state.agents[0].nn.copy()
+                        }
+                        // keep agent 0
+
+                        for (let i = 1; i < draftState.agents.length; i++) {
+                            const x = draftState.bestNeuralNet.copy()
+                            x.mutate(0.1)
+                            draftState.agents[i].nn = x
+                        }
+                        draftState.agents.map(a => a.reset())
+
+                        if (draftState.pretrainEpoch > 25) {
+                            draftState.pretrain = false
+                        } else {
+                            draftState.pretrainEpoch++
+                        }
+                    }
+
+                    while (draftState.pretrain) {
+                        const alive = state.agents.filter(a => a.alive).length
+
+                        if (draftState.iteration < 250 && alive > 0) {
+                            // update agents
+                            draftState.agents.filter(a => a.alive).forEach(a => {
+                                const roadIntersections = getSensorIntersectionsWith(a, state.roads)
+                                const checkpointIntersections = getSensorIntersectionsWith(a, state.checkpoints)
+                                const inputs = [...roadIntersections, ...checkpointIntersections]
+                                updateAgent(a, state.roads, state.checkpoints)
+                                a.update(inputs)
+                            })
+                            draftState.iteration++
+                        } else {
+                            evaluate()
+                        }
+                    }
+                    const alive = state.agents.filter(a => a.alive).length
+
+                    if (draftState.iteration < 250 && alive > 0) {
+                        // update agents
+                        draftState.agents.filter(a => a.alive).forEach(a => {
+                            const roadIntersections = getSensorIntersectionsWith(a, state.roads)
+                            const checkpointIntersections = getSensorIntersectionsWith(a, state.checkpoints)
+                            const inputs = [...roadIntersections, ...checkpointIntersections]
+                            updateAgent(a, state.roads, state.checkpoints)
+                            a.update(inputs)
+                        })
+                        draftState.iteration++
+                    } else {
+                        evaluate()
+                    }
+
                 }));
             },
             getAgents: () => {
@@ -135,14 +212,11 @@ const handleCollisions = (agent: Agent, body: Line[], roads: Line[]) => {
 
 const handleCheckpoints = (agent: Agent, body: Line[], checkpoints: Line[]) => {
     body.forEach(part => {
-        checkpoints.forEach((cp, index) => {
-            if (isVector(checkLineIntersection(part, cp))) {
-                if (agent.reachedCheckpoints % checkpoints.length == index) {
-                    agent.reachedCheckpoints++
-                    return
-                }
-            }
-        })
+        const targetCP = checkpoints[agent.reachedCheckpoints % checkpoints.length]
+        if (isVector(checkLineIntersection(part, targetCP))) {
+            agent.reachedCheckpoints++
+            return
+        }
     })
 }
 
@@ -209,7 +283,7 @@ function getSensorIntersectionsWith(agent: Agent, otherObjects: Line[]) {
 
 function transformSensor(s: Sensor, agent: Agent) {
     const current = s.pos.copy()
-    current.rotate(s.rot + agent.acc.heading())
+    current.rotate(s.rot + agent.dir.heading())
     current.add(agent.pos)
     return new Line(current.x, current.y, agent.pos.x, agent.pos.y)
 }

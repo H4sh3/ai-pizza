@@ -16,12 +16,14 @@ const Canvas2d: React.FC = () => {
     }
     const canvasRef = useRef(null)
 
-    const { getNodes, setNodes, getIntersections, runGameLoop, getAgents, spawnAgent } = useMainState()
+    const { getNodes, setNodes, getIntersections, runGameLoop, getAgents, spawnAgent, getCheckpoints } = useMainState()
 
     useEffect(() => {
         const { nodes } = mapgen()
         setNodes(nodes)
-        spawnAgent()
+        for (let i = 0; i < 10; i++) {
+            spawnAgent()
+        }
     }, [])
 
     const [frameTime, setFrameTime] = useState()
@@ -45,6 +47,7 @@ const Canvas2d: React.FC = () => {
             renderNodes(n, context)
             renderStreets(n, context)
             renderAgents(getAgents(), context)
+            renderCheckpoints(getCheckpoints(), context)
             renderSensorIntersections(getIntersections(), context)
             runGameLoop()
         }

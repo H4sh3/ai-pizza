@@ -59,6 +59,10 @@ class Agent {
         this.acc = new Vector(0, 0)
         this.vel = new Vector(0, 0)
         this.dir = new Vector(this.settings.dirX, this.settings.dirY)
+        this.pos = this.settings.startPos.copy()
+        this.alive = true
+        this.reachedCheckpoints = 0
+        this.isBest = false
     }
 
     initSensors(settings) {

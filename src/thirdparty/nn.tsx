@@ -201,20 +201,14 @@ function randomGaussian() {
   const sd = 1
   let y1, x1, x2, w;
   let y2 = 0
-  if (this._gaussian_previous) {
-    y1 = y2;
-    this._gaussian_previous = false;
-  } else {
-    do {
-      x1 = this.random(2) - 1;
-      x2 = this.random(2) - 1;
-      w = x1 * x1 + x2 * x2;
-    } while (w >= 1);
-    w = Math.sqrt(-2 * Math.log(w) / w);
-    y1 = x1 * w;
-    y2 = x2 * w;
-    this._gaussian_previous = true;
-  }
+  do {
+    x1 = (Math.random() * 2) - 1;
+    x2 = (Math.random() * 2) - 1;
+    w = x1 * x1 + x2 * x2;
+  } while (w >= 1);
+  w = Math.sqrt(-2 * Math.log(w) / w);
+  y1 = x1 * w;
+  y2 = x2 * w;
 
   return y1 * sd;
 };
