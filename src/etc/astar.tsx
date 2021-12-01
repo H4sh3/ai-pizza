@@ -34,11 +34,11 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
         });
     }
 
-    //const all = []
-    //Object.keys(prevNode).forEach(k => {
-    //    all.push(prevNode[k])
-    //})
-    //return all
+//    const all = []
+//    Object.keys(prevNode).forEach(k => {
+//        all.push(prevNode[k])
+//    })
+//    return all
 
     const route = [end]
     try {
@@ -49,7 +49,7 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
             next = prevNode[next.id]
             route.push(next)
         }
-        return route
+        return route.reverse()
     } catch {
         return []
     }

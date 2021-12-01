@@ -208,9 +208,8 @@ export class Node {
         this.color = "#AAAAAA"
     }
 
-    getLines(): Line[] {
+    getLines(usedEdges:number[]): Line[] {
         const lines: Line[] = []
-        const usedEdges = []
 
         Object.keys(this.connections).forEach(direction => {
             const { node, edgeId } = this.getDirection(direction)
@@ -245,7 +244,6 @@ export class Node {
                 }
                 return
             }
-
             if (usedEdges.includes(edgeId)) return
 
             usedEdges.push(edgeId)
@@ -303,6 +301,7 @@ export class Node {
                 lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
             }
         })
+
         return lines
     }
 }

@@ -13,14 +13,15 @@ const config = {
 }
 
 const mapgen = (): { nodes: Node[], edges: Edge[] } => {
-
     let trys = 0
 
     let bestMap = generateGraph()
+
+    return bestMap
     let bestGraphCount = Infinity
     let graphs = checkGraphes(bestMap.nodes)
     let graphCount = Object.keys(graphs).length
-
+    
     while (graphCount !== 1 && trys < 5) {
         const tmpMap = generateGraph()
         graphs = checkGraphes(tmpMap.nodes)
@@ -30,20 +31,21 @@ const mapgen = (): { nodes: Node[], edges: Edge[] } => {
         }
         trys++
     }
-
+    
     // purge other nodes
-
+    
     graphs = checkGraphes(bestMap.nodes)
     // use only nodes from most connected graph
     const tmp = []
     Object.keys(graphs).forEach(c => {
         tmp.push({ "cnt": c, "nodes": graphs[c] })
     })
-
+    
     tmp.sort((a, b) => a.cnt < b.cnt ? -1 : 0)
-
+    
     bestMap.nodes = tmp[0].nodes
-
+    console.log(bestMap.nodes.map(n => n.id))
+    
     return bestMap
 }
 
@@ -57,7 +59,6 @@ const generateGraph = () => {
         const pos = new Vector(randInt(1, config.cols - 1) * NODE_SIZE * 2, config.height / 2)
 
         if (nodes.some(n => n.pos.dist(pos) < config.minDist)) continue
-
         nodes.push(new Node(0, pos.x, pos.y))
     }
 
@@ -75,10 +76,7 @@ const generateGraph = () => {
         nodes.push(new Node(0, pos.x, pos.y))
     })
 
-    nodes.forEach((n, i) => {
-        n.id = i
-    })
-
+    nodes.map((n, i) => n.id = i)
     addEdges(nodes, edges)
 
     nodes.filter(n => n.connections.left === undefined || n.connections.right === undefined)
@@ -129,7 +127,7 @@ const checkGraphes = (nodes: Node[]) => {
     })
 
     toRemove.forEach(k => {
-        delete graphs[k]
+        //delete graphs[k]
     })
 
     return graphs

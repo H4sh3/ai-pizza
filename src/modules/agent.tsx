@@ -35,12 +35,14 @@ class Agent {
     sensors: Sensor[]
     checkpoints: Line[]
     nn: NeuralNetwork
+    tickSinceLastCP: number
 
     constructor(settings: AgentSettings, nn?: NeuralNetwork) {
+        const hidL = Math.floor(((settings.sensorSettings.num * 1) + 2) / 2)
         if (nn) {
             this.nn = nn.copy()
         } else {
-            this.nn = new NeuralNetwork(10, 4, 2)
+            this.nn = new NeuralNetwork(settings.sensorSettings.num, hidL, 2)
         }
         this.pos = settings.startPos.copy();
 
@@ -48,21 +50,18 @@ class Agent {
 
         this.size = new Vector(20, 40)
         this.reset()
-
-        this.alive = true
-        this.isBest = false
-        this.reachedCheckpoints = 0
         this.initSensors(settings.sensorSettings)
     }
 
     reset() {
+        this.pos = this.settings.startPos.copy()
         this.acc = new Vector(0, 0)
         this.vel = new Vector(0, 0)
         this.dir = new Vector(this.settings.dirX, this.settings.dirY)
-        this.pos = this.settings.startPos.copy()
         this.alive = true
-        this.reachedCheckpoints = 0
         this.isBest = false
+        this.reachedCheckpoints = 0
+        this.tickSinceLastCP = 0
     }
 
     initSensors(settings) {
@@ -77,19 +76,7 @@ class Agent {
         }
 
     }
-    /* 
-        initNeuralNet(nn) {
-            if (nn) {
-                //this.nn = nn
-            } else {
-                //this.nn = new NeuralNetwork(this.sensors.length * this.inputFactor + 2, Math.floor((this.sensors.length + 2) / 2), 2)
-                const inNodes = this.sensors.length
-                const hiddenNodes = Math.floor((this.sensors.length + 2) / 2)
-                const outputNodes = 2
-                //this.nn = new NeuralNetwork(inNodes, hiddenNodes, outputNodes)
-            }
-        }
-     */
+
     kill() {
         this.alive = false;
     }
@@ -101,6 +88,10 @@ class Agent {
     update(input) {
         const output = this.nn.predict(input)
         const velMag = this.vel.mag()
+
+        if (this.tickSinceLastCP > 150) {
+            this.kill()
+        }
 
         const steer = map(output[0], 0, 1, -this.settings.steerRange, this.settings.steerRange)
         this.dir.rotate(steer * velMag)

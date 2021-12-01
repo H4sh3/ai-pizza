@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
 import { Node, Line, Edge, Vector } from "../modules/models"
+import getTrainingsEnv from '../modules/trainingsEnv'
 import search from "../etc/astar"
 import mapgen, { randInt } from "../modules/mapgen"
 import { randomInt } from "crypto"
@@ -16,12 +17,13 @@ const Canvas2d: React.FC = () => {
     }
     const canvasRef = useRef(null)
 
-    const { getNodes, setNodes, getIntersections, runGameLoop, getAgents, spawnAgent, getCheckpoints } = useMainState()
+    const { getNodes, setNodes, getIntersections, enableFastTrain, runGameLoop, getAgents, spawnAgent, getCheckpoints } = useMainState()
 
     useEffect(() => {
-        const { nodes } = mapgen()
+        //const { nodes } = mapgen()
+        const { nodes } = getTrainingsEnv()
         setNodes(nodes)
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 25; i++) {
             spawnAgent()
         }
     }, [])
@@ -33,11 +35,9 @@ const Canvas2d: React.FC = () => {
         const context = canvas.getContext('2d')
         let lastTime
         const frame = time => {
-            setFrameTime(time)
-            frameId = requestAnimationFrame(frame)
-
             const timeDelta = time - lastTime
-            if (timeDelta < 1000 / 60) return
+            frameId = requestAnimationFrame(frame)
+            //if (timeDelta < 1000 / 60) return
             lastTime = time
 
             context.fillStyle = "#AAAA99"
@@ -49,7 +49,7 @@ const Canvas2d: React.FC = () => {
             renderAgents(getAgents(), context)
             renderCheckpoints(getCheckpoints(), context)
             renderSensorIntersections(getIntersections(), context)
-            runGameLoop()
+            runGameLoop(context)
         }
 
         requestAnimationFrame(frame)
@@ -58,6 +58,7 @@ const Canvas2d: React.FC = () => {
 
     return <div>
         <canvas ref={canvasRef} {...props} />
+        <button onClick={enableFastTrain}>fast!</button>
     </div>
 }
 
@@ -84,8 +85,9 @@ const drawEdges = (nodes: Node[], context) => {
 const renderStreets = (nodes: Node[], context) => {
     context.strokeStyle = '#000000'
     let lines = []
+    const usedEdgeIds = []
     nodes.forEach(n => {
-        lines = [...lines, ...n.getLines()]
+        lines = [...lines, ...n.getLines(usedEdgeIds)]
     })
     lines.forEach(l => {
         context.beginPath();
@@ -111,15 +113,20 @@ const renderNodes = (nodes: Node[], context) => {
         context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
-        context.fillText(n.id, n.pos.x, n.pos.y);
+        context.fillText(n.id, n.pos.x - (NODE_SIZE) + 2, n.pos.y + NODE_SIZE / 2);
     })
 }
 
 
 const renderAgents = (agents: Agent[], context) => {
     agents.forEach(a => {
-        context.fillStyle = "#00FFFF"
-        context.fillRect(a.pos.x, a.pos.y, NODE_SIZE * 2, NODE_SIZE * 0.5)
+        if (a.alive) {
+            context.fillStyle = "#00FFFF"
+        } else {
+            context.fillStyle = "#FF0000"
+        }
+        const s = NODE_SIZE * 0.5
+        context.fillRect(a.pos.x - (s / 2), a.pos.y - (s / 2), s, s)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
         //context.fillText(n.id, n.pos.x, n.pos.y);
@@ -130,7 +137,7 @@ const renderAgents = (agents: Agent[], context) => {
 const renderSensorIntersections = (intersections: Vector[], context) => {
     intersections.forEach(i => {
         context.fillStyle = "#FF0000"
-        context.fillRect(i.x, i.y, NODE_SIZE * 2, NODE_SIZE * 2)
+        context.fillRect(i.x, i.y, 5, 5)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
         //context.fillText(n.id, n.pos.x, n.pos.y);
