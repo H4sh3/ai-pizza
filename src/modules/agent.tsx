@@ -38,11 +38,11 @@ class Agent {
     tickSinceLastCP: number
 
     constructor(settings: AgentSettings, nn?: NeuralNetwork) {
-        const hidL = Math.floor(((settings.sensorSettings.num * 1) + 2) / 2)
+        const hidL = Math.floor(((settings.sensorSettings.num * 2) + 2) / 2)
         if (nn) {
             this.nn = nn.copy()
         } else {
-            this.nn = new NeuralNetwork(settings.sensorSettings.num, hidL, 2)
+            this.nn = new NeuralNetwork(settings.sensorSettings.num * 2, hidL, 2)
         }
         this.pos = settings.startPos.copy();
 
@@ -89,15 +89,13 @@ class Agent {
         const output = this.nn.predict(input)
         const velMag = this.vel.mag()
 
-        if (this.tickSinceLastCP > 150) {
-            this.kill()
-        }
-
         const steer = map(output[0], 0, 1, -this.settings.steerRange, this.settings.steerRange)
         this.dir.rotate(steer * velMag)
         this.acc = new Vector(0, 0)
         const accChange = map(output[1], 0, 1, -1, 1)
-        this.acc.add(new Vector(accChange, 0).rotate(this.dir.heading()).mult(accChange))
+        const x = new Vector(accChange, 0)
+        x.rotate(this.dir.heading()).mult(accChange)
+        this.acc.add(x)
         this.acc.add(this.dir.copy().mult(1 / (1 + velMag)))
         this.vel.add(this.acc)
 
@@ -105,21 +103,6 @@ class Agent {
 
         this.vel.div(this.settings.velReduction)
     }
-}
-
-function getAcc(tractionForce, fDrag, fRoll) {
-    return tractionForce.add(fDrag).add(fRoll)
-}
-
-function getFDrag(vel) {
-    const cDrag = 0.0015
-    const magVel = vel.mag()
-    return vel.copy().mult(cDrag * magVel)
-}
-
-function getFRoll(vel) {
-    const cRoll = 0.05
-    return vel.copy().mult(-cRoll)
 }
 
 export default Agent

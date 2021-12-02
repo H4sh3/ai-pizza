@@ -1,39 +1,27 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
-import { Node, Line, Edge, Vector } from "../modules/models"
-import getTrainingsEnv from '../modules/trainingsEnv'
-import search from "../etc/astar"
-import mapgen, { randInt } from "../modules/mapgen"
-import { randomInt } from "crypto"
+import { Node, Line, Vector } from "../modules/models"
 import { useMainState } from "../mainState"
-import { request } from "https"
 import Agent from "../modules/agent"
+import Gym from "../modules/gym"
 
+const gym = new Gym(WIDTH, HEIGHT)
 
 const Canvas2d: React.FC = () => {
     const props = {
         width: WIDTH,
         height: HEIGHT
     }
+
     const canvasRef = useRef(null)
+    const [iter, setIter] = useState(0)
 
-    const { getNodes, setNodes, getIntersections, enableFastTrain, runGameLoop, getAgents, spawnAgent, getCheckpoints } = useMainState()
 
     useEffect(() => {
-        //const { nodes } = mapgen()
-        const { nodes } = getTrainingsEnv()
-        setNodes(nodes)
-        for (let i = 0; i < 25; i++) {
-            spawnAgent()
-        }
-    }, [])
-
-    const [frameTime, setFrameTime] = useState()
-    useEffect(() => {
-        let frameId
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
         let lastTime
+        let frameId
         const frame = time => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
@@ -43,13 +31,16 @@ const Canvas2d: React.FC = () => {
             context.fillStyle = "#AAAA99"
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
-            const n = getNodes()
-            renderNodes(n, context)
-            renderStreets(n, context)
-            renderAgents(getAgents(), context)
-            renderCheckpoints(getCheckpoints(), context)
-            renderSensorIntersections(getIntersections(), context)
-            runGameLoop(context)
+            renderNodes(gym.nodes, context)
+            gym.roadTree.forEach(t => {
+                renderLines(t.elements, context, "#FFFFFF")
+            })
+            renderLines(gym.checkpoints, context, "#00FF00")
+            renderLines(gym.sensorVisual, context, "#0000FF")
+            renderAgents(gym.agents, context)
+            renderIntersections(gym.intersections, context)
+            gym.step()
+            setIter(gym.iteration)
         }
 
         requestAnimationFrame(frame)
@@ -58,48 +49,17 @@ const Canvas2d: React.FC = () => {
 
     return <div>
         <canvas ref={canvasRef} {...props} />
-        <button onClick={enableFastTrain}>fast!</button>
+        <button onClick={() => {
+            gym.pretrain = true
+            gym.pretrainEpoch = 0
+        }}>fast!</button>
+        {iter}
     </div>
 }
 
-const drawEdgeEdges = (edges: Edge[], context) => {
-    edges.forEach(n => {
-        context.beginPath();
-        context.moveTo(n.startNode.pos.x, n.startNode.pos.y);
-        context.lineTo(n.endNode.pos.x, n.endNode.pos.y);
-        context.stroke();
-    })
-}
-
-const drawEdges = (nodes: Node[], context) => {
-    nodes.forEach(n => {
-        n.getNeightbours().forEach(other => {
-            context.beginPath();
-            context.moveTo(n.pos.x, n.pos.y);
-            context.lineTo(other.pos.x, other.pos.y);
-            context.stroke();
-        })
-    })
-}
-
-const renderStreets = (nodes: Node[], context) => {
-    context.strokeStyle = '#000000'
-    let lines = []
-    const usedEdgeIds = []
-    nodes.forEach(n => {
-        lines = [...lines, ...n.getLines(usedEdgeIds)]
-    })
+const renderLines = (lines: Line[], context, color) => {
+    context.strokeStyle = color
     lines.forEach(l => {
-        context.beginPath();
-        context.moveTo(l.p1.x, l.p1.y);
-        context.lineTo(l.p2.x, l.p2.y);
-        context.stroke();
-    })
-}
-
-const renderCheckpoints = (checkpoints: Line[], context) => {
-    checkpoints.forEach(l => {
-        context.strokeStyle = '#00FF00'
         context.beginPath();
         context.moveTo(l.p1.x, l.p1.y);
         context.lineTo(l.p2.x, l.p2.y);
@@ -117,11 +77,10 @@ const renderNodes = (nodes: Node[], context) => {
     })
 }
 
-
 const renderAgents = (agents: Agent[], context) => {
     agents.forEach(a => {
         if (a.alive) {
-            context.fillStyle = "#00FFFF"
+            context.fillStyle = "#FFFF00"
         } else {
             context.fillStyle = "#FF0000"
         }
@@ -133,14 +92,12 @@ const renderAgents = (agents: Agent[], context) => {
     })
 }
 
-
-const renderSensorIntersections = (intersections: Vector[], context) => {
+const renderIntersections = (intersections: Vector[], context) => {
     intersections.forEach(i => {
         context.fillStyle = "#FF0000"
         context.fillRect(i.x, i.y, 5, 5)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
-        //context.fillText(n.id, n.pos.x, n.pos.y);
     })
 }
 

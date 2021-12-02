@@ -181,7 +181,7 @@ class NeuralNetwork {
 
     function func(x) {
       if (Math.random() < learningRate) {
-        let offset = randomGaussian() * 0.5;
+        let offset = randn_bm() * 0.5;
         let newx = x + offset;
         return newx;
       } else {
