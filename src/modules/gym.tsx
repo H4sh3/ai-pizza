@@ -2,8 +2,8 @@ import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, Sensor } from "./agent"
 import { NODE_SIZE } from "./const"
-import genRandomMap from "./mapgen"
-import mapgen, { randInt } from "./mapgen"
+import genRandomCity from "./maps/cityGeneration"
+import mapgen, { randInt } from "./maps/cityGeneration"
 import { checkLineIntersection, map } from "./math"
 import { PretrainedModel } from "./model"
 import { isVector, Line, Node, Vector } from "./models"
@@ -104,7 +104,7 @@ export class Gym {
             this.addTestRoute()
             this.addAgents()
         } else {
-            const nodes = genRandomMap()
+            const nodes = genRandomCity()
             this.nodes = nodes
             const route = this.rndRoute()
             this.agents = [new Agent(this.agentSettings, NeuralNetwork.deserialize(PretrainedModel))]

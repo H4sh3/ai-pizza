@@ -1,6 +1,6 @@
-import { HEIGHT, NODE_SIZE, WIDTH } from "./const";
-import { radToDeg, checkLineIntersection } from "./math";
-import { Edge, Node, Vector } from "./models";
+import { HEIGHT, NODE_SIZE, WIDTH } from "../const";
+import { radToDeg, checkLineIntersection } from "../math";
+import { Edge, Node, Vector } from "../models";
 
 const config = {
     width: WIDTH,
@@ -12,7 +12,7 @@ const config = {
     rows: Math.round(HEIGHT / (NODE_SIZE * 2)),
 }
 
-const genRandomMap = (): Node[] => {
+const genRandomCity = (): Node[] => {
     let trys = 0
 
     let bestMap = generateGraph()
@@ -293,4 +293,4 @@ export const absoluteDist = (node1: Node, node2: Node, axis: string) => {
     return Math.abs(Math.abs(node1.pos[axis]) - Math.abs(node2.pos[axis]))
 }
 
-export default genRandomMap
+export default genRandomCity
