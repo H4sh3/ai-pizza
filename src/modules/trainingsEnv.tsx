@@ -6,11 +6,12 @@ const getTrainingsEnv = (): { nodes: Node[], edges: Edge[] } => {
     const nodes: Node[] = []
     const edges: Edge[] = []
 
-    let offSet = NODE_SIZE * 2
+    let offSetY = NODE_SIZE * 2
+    let offSetX = NODE_SIZE * 2
 
     for (let y = 0; y < 4; y++) {
         for (let x = 0; x < 4; x++) {
-            nodes.push(new Node(0, offSet + (x * 4 * NODE_SIZE * 1.5), offSet + (y * 4 * NODE_SIZE)))
+            nodes.push(new Node(0, offSetX + (x * 4 * NODE_SIZE), offSetY + (y * 4 * NODE_SIZE)))
         }
     }
 
@@ -36,12 +37,12 @@ const getTrainingsEnv = (): { nodes: Node[], edges: Edge[] } => {
     })
 
     edges.map((e, i) => e.id = i)
-    const n16 = new Node(0, offSet + (5 * 4 * NODE_SIZE * 1.5), offSet + (0 * 4 * NODE_SIZE))
-    const n17 = new Node(0, offSet + (5 * 4 * NODE_SIZE * 1.5), offSet + (2 * 4 * NODE_SIZE))
-    const n18 = new Node(0, offSet + (4 * 4 * NODE_SIZE * 1.5), offSet + (2 * 4 * NODE_SIZE))
-    const n19 = new Node(0, offSet + (6 * 4 * NODE_SIZE * 1.5), offSet + (0 * 4 * NODE_SIZE))
-    const n20 = new Node(0, offSet + (6 * 4 * NODE_SIZE * 1.5), offSet + (3 * 4 * NODE_SIZE))
-    const n21 = new Node(0, offSet + (5 * 4 * NODE_SIZE * 1.5), offSet + (1 * 4 * NODE_SIZE))
+    const n16 = new Node(0, offSetX + (5 * 4 * NODE_SIZE * 1.5), offSetY + (0 * 4 * NODE_SIZE))
+    const n17 = new Node(0, offSetX + (5 * 4 * NODE_SIZE * 1.5), offSetY + (2 * 4 * NODE_SIZE))
+    const n18 = new Node(0, offSetX + (4 * 4 * NODE_SIZE * 1.5), offSetY + (2 * 4 * NODE_SIZE))
+    const n19 = new Node(0, offSetX + (6 * 4 * NODE_SIZE * 1.5), offSetY + (0 * 4 * NODE_SIZE))
+    const n20 = new Node(0, offSetX + (6 * 4 * NODE_SIZE * 1.5), offSetY + (3 * 4 * NODE_SIZE))
+    const n21 = new Node(0, offSetX + (5 * 4 * NODE_SIZE * 1.5), offSetY + (1 * 4 * NODE_SIZE))
 
     nodes.push(n16)
     nodes.push(n17)

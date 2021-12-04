@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
 import { Node, Line, Vector } from "../modules/models"
-import { useMainState } from "../mainState"
 import Agent from "../modules/agent"
 import Gym from "../modules/gym"
+import { degToRad } from "../modules/math"
 
 const gym = new Gym(WIDTH, HEIGHT)
 
@@ -32,9 +32,10 @@ const Canvas2d: React.FC = () => {
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
             renderNodes(gym.nodes, context)
-            gym.roadTree.forEach(t => {
-                renderLines(t.elements, context, "#FFFFFF")
-            })
+            renderLines(gym.roads, context, "#FFFFFF")
+            //            gym.roadTree.forEach(t => {
+            //                renderLines(t.elements, context, "#FFFFFF")
+            //            })
             renderLines(gym.checkpoints, context, "#00FF00")
             renderLines(gym.sensorVisual, context, "#0000FF")
             renderAgents(gym.agents, context)
@@ -53,6 +54,9 @@ const Canvas2d: React.FC = () => {
             gym.pretrain = true
             gym.pretrainEpoch = 0
         }}>fast!</button>
+        <button onClick={() => {
+            console.log(gym.agents[0].nn.serialize())
+        }}>save</button>
         {iter}
     </div>
 }
@@ -79,15 +83,22 @@ const renderNodes = (nodes: Node[], context) => {
 
 const renderAgents = (agents: Agent[], context) => {
     agents.forEach(a => {
+        context.save()
         if (a.alive) {
             context.fillStyle = "#FFFF00"
         } else {
             context.fillStyle = "#FF0000"
         }
         const s = NODE_SIZE * 0.5
-        context.fillRect(a.pos.x - (s / 2), a.pos.y - (s / 2), s, s)
+        const aX = a.pos.x
+        const aY = a.pos.y
+        context.translate(aX, aY)
+        context.rotate(degToRad(a.acc.heading()))
+        //context.translate(-aX, -aY)
+        context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
+        context.restore()
         //context.fillText(n.id, n.pos.x, n.pos.y);
     })
 }

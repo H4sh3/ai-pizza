@@ -1,10 +1,13 @@
 import { map } from "./math";
 import { Line, Vector } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
+import { Node } from './models'
 
 export interface AgentSettings {
-    dirX: number,
-    dirY: number,
+    direction: {
+        x: number,
+        y: number
+    }
     velReduction: number,
     steerRange: number,
     startPos: Vector,
@@ -36,6 +39,7 @@ class Agent {
     checkpoints: Line[]
     nn: NeuralNetwork
     tickSinceLastCP: number
+    route: Node[]
 
     constructor(settings: AgentSettings, nn?: NeuralNetwork) {
         const hidL = Math.floor(((settings.sensorSettings.num * 2) + 2) / 2)
@@ -57,7 +61,7 @@ class Agent {
         this.pos = this.settings.startPos.copy()
         this.acc = new Vector(0, 0)
         this.vel = new Vector(0, 0)
-        this.dir = new Vector(this.settings.dirX, this.settings.dirY)
+        this.dir = new Vector(this.settings.direction.x, this.settings.direction.y)
         this.alive = true
         this.isBest = false
         this.reachedCheckpoints = 0
