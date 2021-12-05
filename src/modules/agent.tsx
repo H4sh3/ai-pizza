@@ -4,14 +4,14 @@ import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
 
 export interface AgentSettings {
-    direction: {
-        x: number,
-        y: number
-    }
     velReduction: number,
     steerRange: number,
-    startPos: Vector,
     sensorSettings: SensorSettings
+}
+
+export interface SpawnSettings {
+    direction: Vector,
+    startPos: Vector
 }
 
 export interface SensorSettings {
@@ -28,6 +28,7 @@ export interface Sensor {
 class Agent {
     pos: Vector
     settings: AgentSettings
+    spawnSettings: SpawnSettings
     size: Vector
     alive: boolean
     isBest: boolean
@@ -41,14 +42,15 @@ class Agent {
     tickSinceLastCP: number
     route: Node[]
 
-    constructor(settings: AgentSettings, nn?: NeuralNetwork) {
+    constructor(spawnSettings: SpawnSettings, settings: AgentSettings, nn?: NeuralNetwork) {
         const hidL = Math.floor(((settings.sensorSettings.num * 2) + 2) / 2)
         if (nn) {
             this.nn = nn.copy()
         } else {
             this.nn = new NeuralNetwork(settings.sensorSettings.num * 2, hidL, 2)
         }
-        this.pos = settings.startPos.copy();
+        this.spawnSettings = spawnSettings
+        this.pos = this.spawnSettings.startPos.copy();
 
         this.settings = settings
 
@@ -58,10 +60,10 @@ class Agent {
     }
 
     reset() {
-        this.pos = this.settings.startPos.copy()
+        this.pos = this.spawnSettings.startPos.copy()
         this.acc = new Vector(0, 0)
         this.vel = new Vector(0, 0)
-        this.dir = new Vector(this.settings.direction.x, this.settings.direction.y)
+        this.dir = new Vector(this.spawnSettings.direction.x, this.spawnSettings.direction.y)
         this.alive = true
         this.isBest = false
         this.reachedCheckpoints = 0

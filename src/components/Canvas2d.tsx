@@ -28,12 +28,11 @@ const Canvas2d: React.FC = () => {
         const frame = time => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
-            setIter(timeDelta)
             if (timeDelta < 1000 / 60) return
-            lastTime = time
-
-            context.fillStyle = "#AAAA99"
+            context.fillStyle = "rgb(120, 120, 120)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
+
+            lastTime = time
 
             //renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
@@ -99,7 +98,7 @@ const renderAgents = (agents: Agent[], context) => {
     agents.filter(a => a.alive).forEach(a => {
         context.save()
         if (a.alive) {
-            context.fillStyle = "#FFFF00"
+            context.fillStyle = "rgb(255, 255, 0)";
         } else {
             context.fillStyle = "#FF0000"
         }
