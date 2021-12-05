@@ -209,12 +209,14 @@ export class Node {
         return n
     }
 
-    getEdges() {
-        return Object.keys(this.connections).map(k => {
-            if (this.connections[k] !== undefined) {
-                return this.connections[k]
+    getEdges(): Edge[] {
+        const x: Edge[] = []
+        Object.keys(this.connections).map(k => {
+            if (this.connections[k] != undefined) {
+                x.push(this.connections[k])
             }
         })
+        return x
     }
 
     getLeft() {

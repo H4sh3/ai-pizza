@@ -15,8 +15,9 @@ const Canvas2d: React.FC = () => {
 
     const canvasRef = useRef(null)
     const [iter, setIter] = useState(0)
-    const [showSensors, setShowSensors] = useState(false)
-    const [showIntersections, setShowIntersections] = useState(false)
+
+    let showIntersections = false
+    let showSensors = false
 
 
     useEffect(() => {
@@ -27,24 +28,26 @@ const Canvas2d: React.FC = () => {
         const frame = time => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
+            setIter(timeDelta)
             if (timeDelta < 1000 / 60) return
             lastTime = time
 
             context.fillStyle = "#AAAA99"
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
-            renderNodes(gym.nodes, context)
+            //renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
-            renderLines(gym.checkpoints, context, "#00FF00")
-            if(showSensors){
+            //renderLines(gym.checkpoints, context, "#00FF00")
+            if (showSensors) {
                 renderLines(gym.sensorVisual, context, "#0000FF")
             }
             renderAgents(gym.agents, context)
-            if(showIntersections){
+
+            if (showIntersections) {
                 renderIntersections(gym.intersections, context)
             }
+
             gym.step()
-            setIter(gym.iteration)
         }
 
         requestAnimationFrame(frame)
@@ -62,11 +65,12 @@ const Canvas2d: React.FC = () => {
         }}>save</button>
         {iter}
         <button onClick={() => {
-            setShowSensors(showSensors)
+            showSensors = !showSensors
         }}>sensors</button>
         <button onClick={() => {
-            setShowIntersections(showIntersections)
-        }}>intersections</button>
+            showIntersections = !showIntersections
+        }
+        }>intersections</button>
     </div>
 }
 
@@ -92,7 +96,7 @@ const renderNodes = (nodes: Node[], context) => {
 }
 
 const renderAgents = (agents: Agent[], context) => {
-    agents.forEach(a => {
+    agents.filter(a => a.alive).forEach(a => {
         context.save()
         if (a.alive) {
             context.fillStyle = "#FFFF00"

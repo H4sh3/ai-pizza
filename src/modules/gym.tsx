@@ -4,7 +4,7 @@ import Agent, { AgentSettings, Sensor } from "./agent"
 import { NODE_SIZE } from "./const"
 import genRandomCity from "./maps/cityGeneration"
 import mapgen, { randInt } from "./maps/cityGeneration"
-import generateTrainingsMap, { generateRandomTrainingsMap } from "./maps/trainingsGeneration"
+import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
 import { checkLineIntersection, map } from "./math"
 import { PretrainedModel } from "./model"
 import { isVector, Line, Node, Vector } from "./models"
@@ -37,7 +37,7 @@ export class Gym {
     width: number
     height: number
     mostCheckpoints: number
-    bestNeuralNet: NeuralNetwork | undefined
+    bestNeuralNet: NeuralNetwork
     epoch: number
     nodes: Node[]
     agents: Agent[]
@@ -69,8 +69,8 @@ export class Gym {
                 x: 0,
                 y: 0
             },
-            steerRange: 10,
-            velReduction: 1.20,
+            steerRange: 15,
+            velReduction: 1.70,
             startPos: new Vector(0, 0),
             sensorSettings: {
                 num: 9,
@@ -80,7 +80,7 @@ export class Gym {
         }
 
         this.settings = {
-            popSize: 25
+            popSize: 50
         }
 
         this.mostCheckpoints = -1
@@ -94,6 +94,9 @@ export class Gym {
         this.intersections = []
         this.sensorVisual = []
         this.allRoutes = {}
+
+        this.bestNeuralNet = NeuralNetwork.deserialize(PretrainedModel)
+
         this.init()
     }
 
@@ -101,16 +104,20 @@ export class Gym {
         const training = true
         if (training) {
             // const { nodes } = getTrainingsEnv()
-            this.nodes = generateRandomTrainingsMap(300)
+            this.nodes = generateRandomTrainingsMap(150)
             this.createAllRoutesDict()
+
             const route = this.rndRoute()
+
+            
             this.addAgents()
+
             this.agents.forEach(a => a.route = route)
         } else {
             this.nodes = genRandomCity()
             this.createAllRoutesDict()
             const route = this.rndRoute()
-            this.agents = [new Agent(this.agentSettings, NeuralNetwork.deserialize(PretrainedModel))]
+            this.agents = [new Agent(this.agentSettings,)]
             this.agents[0].route = route
         }
         this.addRoads()
@@ -133,41 +140,8 @@ export class Gym {
     }
 
     spawnAgent() {
-        const agent = new Agent(this.agentSettings)
+        const agent = new Agent(this.agentSettings, this.bestNeuralNet.copy())
         this.agents.push(agent)
-    }
-
-    addTestRoute() {
-        this.checkpoints = []
-        const { nodes } = this
-        const p = [18, 17, 21, 16, 19, 20, 15, 14, 10, 11, 15, 20, 19, 16, 21, 17, 18, 11, 10, 14, 15, 11, 18]
-        let path = p.map(id => nodes.filter(n => n.id === id)[0])
-
-
-        const rt = new Sector(0, 0, this.width, this.height)
-        const usedIds = []
-        path.forEach(n => {
-            n.getLines(usedIds).forEach(l => {
-                rt.elements.push(l)
-            })
-        })
-        this.roadTree = [rt]
-
-        const startNode = path[0]
-        const s2 = path[1]
-        if (startNode.connections.left !== undefined && startNode.connections.left.getOther(startNode.id).id === s2.id) {
-            this.agentSettings.direction.x = -1
-        } else if (startNode.connections.right !== undefined && startNode.connections.right.getOther(startNode.id).id === s2.id) {
-            this.agentSettings.direction.x = 1
-        } else if (startNode.connections.top !== undefined && startNode.connections.top.getOther(startNode.id).id === s2.id) {
-            this.agentSettings.direction.y = -1
-        } else if (startNode.connections.bottom !== undefined && startNode.connections.bottom.getOther(startNode.id).id === s2.id) {
-            this.agentSettings.direction.y = 1
-        }
-        const checkpoints = getCheckpoints(path)
-
-        this.checkpoints = checkpoints
-        this.agentSettings.startPos = startNode.pos.copy()
     }
 
     createAllRoutesDict() {
@@ -265,6 +239,7 @@ export class Gym {
             this.intersections = []
             this.sensorVisual = []
 
+            let finishedRoute = false
             const aliveAgents = this.agents.filter(a => a.alive)
             aliveAgents.forEach(a => {
                 // if (this.iteration > 15 && a.pos.dist(a.settings.startPos) < 25 && a.reachedCheckpoints < 2) a.kill()
@@ -272,35 +247,40 @@ export class Gym {
                 // transform sensors to current position & direction
                 const transformedSensors = a.sensors.map(sensor => transformSensor(sensor, a))
                 this.sensorVisual = [...this.sensorVisual, ...transformedSensors]
-
-                //const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, this.roadTree.find(r => r.inside(a.pos)).elements)
                 const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, this.roads)
                 this.intersections = [...this.intersections, ...roadIntersections[1]]
-
                 const checkpointIntersections = getSensorIntersectionsWith(a, transformedSensors, [this.checkpoints[a.reachedCheckpoints % this.checkpoints.length]])
-                //this.intersections = [...this.intersections, ...checkpointIntersections[1]]
-
                 const inputs = [...roadIntersections[0], ...checkpointIntersections[0]]
-
                 const reachedLastCheckpoint = agentsCollisions(a, this.roads, this.checkpoints)
 
                 if (reachedLastCheckpoint) {
-                    this.agents.map(a => {
-                        a.pos = this.agentSettings.startPos.copy()
-                        a.dir.x = this.agentSettings.direction.x
-                        a.dir.y = this.agentSettings.direction.y
-                    })
-
-                    //const newRoute = this.getNewRouteFrom(a.route[a.route.length - 1])
-                    //console.log(newRoute)
-                    //this.agentSettings.direction = this.directionOfNodes(newRoute[0], newRoute[1])
-                    //this.checkpoints = getCheckpoints(newRoute)
-                    //this.agents[0].dir.x = this.agentSettings.direction.x
-                    //this.agents[0].dir.y = this.agentSettings.direction.y
+                    finishedRoute = true
                 }
 
                 a.update(inputs)
             })
+
+            if (finishedRoute) {
+                const newRoute = this.getNewRouteFrom(this.agents[0].route[this.agents[0].route.length - 1])
+                const dir = directionOfNodes(newRoute[0], newRoute[1])
+                this.checkpoints = getCheckpoints(newRoute)
+                this.agentSettings.direction = dir
+                this.agentSettings.startPos = newRoute[0].pos.copy()
+                this.agents.map(a => {
+                    a.route = newRoute
+                    // a.pos = this.agentSettings.startPos.copy()
+                    // a.dir.x = this.agentSettings.direction.x
+                    // a.dir.y = this.agentSettings.direction.y
+                    a.pos.x = newRoute[0].pos.x
+                    a.pos.y = newRoute[0].pos.y
+                    a.dir.x = dir.x
+                    a.dir.y = dir.y
+                    a.reachedCheckpoints = 0
+                    a.acc = new Vector(0, 0)
+                    a.vel = new Vector(0, 0)
+                    a.reachedCheckpoints = 0
+                })
+            }
         }
 
         const loop = () => {
@@ -308,7 +288,7 @@ export class Gym {
             if (this.iteration < this.maxIter && alive > 0) {
                 // update agents
                 updateAgents()
-                this.iteration++
+                //this.iteration++
             } else {
                 evaluate()
                 this.iteration = 0
@@ -318,22 +298,37 @@ export class Gym {
             }
         }
 
-        while (this.pretrain) {
-            loop()
-        }
+        //while (this.pretrain) {
+        //    loop()
+        //}
+        //loop()
         loop()
     }
 
     getNewRouteFrom(sNode: Node): Node[] {
-        let r = []
+        let r
+        let found = false
+        const x = []
         Object.keys(this.allRoutes).forEach(k => {
-            this.allRoutes[k].forEach(route => {
-                console.log(`route s node id ${route[0].id} - ${sNode.id}`)
+            x.push({ "l": +k, routes: this.allRoutes[k] })
+        })
+
+        x.sort((a, b) => a.l > b.l ? -1 : 0)
+
+        while (!found) {
+            let lr = x[randInt(0, 25)]
+
+            if (found) return
+            shuffle(lr.routes)
+            lr.routes.forEach(route => {
+                if (found) return
                 if (route[0].id === sNode.id) {
                     r = route
+                    found = true
                 }
             })
-        })
+        }
+
         return r
     }
 }
