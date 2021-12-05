@@ -15,6 +15,8 @@ const Canvas2d: React.FC = () => {
 
     const canvasRef = useRef(null)
     const [iter, setIter] = useState(0)
+    const [showSensors, setShowSensors] = useState(false)
+    const [showIntersections, setShowIntersections] = useState(false)
 
 
     useEffect(() => {
@@ -25,7 +27,7 @@ const Canvas2d: React.FC = () => {
         const frame = time => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
-            //if (timeDelta < 1000 / 60) return
+            if (timeDelta < 1000 / 60) return
             lastTime = time
 
             context.fillStyle = "#AAAA99"
@@ -33,13 +35,14 @@ const Canvas2d: React.FC = () => {
 
             renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
-            //            gym.roadTree.forEach(t => {
-            //                renderLines(t.elements, context, "#FFFFFF")
-            //            })
             renderLines(gym.checkpoints, context, "#00FF00")
-            renderLines(gym.sensorVisual, context, "#0000FF")
+            if(showSensors){
+                renderLines(gym.sensorVisual, context, "#0000FF")
+            }
             renderAgents(gym.agents, context)
-            renderIntersections(gym.intersections, context)
+            if(showIntersections){
+                renderIntersections(gym.intersections, context)
+            }
             gym.step()
             setIter(gym.iteration)
         }
@@ -58,16 +61,23 @@ const Canvas2d: React.FC = () => {
             console.log(gym.agents[0].nn.serialize())
         }}>save</button>
         {iter}
+        <button onClick={() => {
+            setShowSensors(showSensors)
+        }}>sensors</button>
+        <button onClick={() => {
+            setShowIntersections(showIntersections)
+        }}>intersections</button>
     </div>
 }
 
 const renderLines = (lines: Line[], context, color) => {
     context.strokeStyle = color
-    lines.forEach(l => {
+    lines.forEach((l, i) => {
         context.beginPath();
         context.moveTo(l.p1.x, l.p1.y);
         context.lineTo(l.p2.x, l.p2.y);
         context.stroke();
+        //context.fillText(i, (l.p1.x + l.p2.x) / 2, (l.p1.y + l.p2.y) / 2);
     })
 }
 
@@ -77,7 +87,7 @@ const renderNodes = (nodes: Node[], context) => {
         context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
-        context.fillText(n.id, n.pos.x - (NODE_SIZE) + 2, n.pos.y + NODE_SIZE / 2);
+        //context.fillText(n.id, n.pos.x - (NODE_SIZE) + 2, n.pos.y + NODE_SIZE / 2);
     })
 }
 
@@ -94,7 +104,6 @@ const renderAgents = (agents: Agent[], context) => {
         const aY = a.pos.y
         context.translate(aX, aY)
         context.rotate(degToRad(a.acc.heading()))
-        //context.translate(-aX, -aY)
         context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
         context.fillStyle = "#000000"
         context.font = "30px Arial";

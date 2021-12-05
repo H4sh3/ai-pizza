@@ -146,6 +146,13 @@ export class Edge {
     }
 }
 
+export enum Direction {
+    left,
+    right,
+    up,
+    down
+}
+
 export class Node {
     id: number
     color: string
@@ -155,6 +162,37 @@ export class Node {
         right: Edge | undefined
         top: Edge | undefined,
         bottom: Edge | undefined
+    }
+
+    constructor(id: number, x: number, y: number) {
+        this.id = id
+        this.pos = new Vector(x, y)
+        this.connections = {
+            left: undefined,
+            right: undefined,
+            top: undefined,
+            bottom: undefined,
+        }
+        this.color = "#AAAAAA"
+    }
+
+    getOpenDirections(): Direction[] {
+        const directions: Direction[] = []
+
+        if (this.connections.bottom === undefined) {
+            directions.push(Direction.down)
+        }
+        if (this.connections.left === undefined) {
+            directions.push(Direction.left)
+        }
+        if (this.connections.right === undefined) {
+            directions.push(Direction.right)
+        }
+        if (this.connections.top === undefined) {
+            directions.push(Direction.up)
+        }
+
+        return directions
     }
 
     getNeightbours(): Node[] {
@@ -169,6 +207,14 @@ export class Node {
             }
         })
         return n
+    }
+
+    getEdges() {
+        return Object.keys(this.connections).map(k => {
+            if (this.connections[k] !== undefined) {
+                return this.connections[k]
+            }
+        })
     }
 
     getLeft() {
@@ -196,19 +242,7 @@ export class Node {
         }
     }
 
-    constructor(id: number, x: number, y: number) {
-        this.id = id
-        this.pos = new Vector(x, y)
-        this.connections = {
-            left: undefined,
-            right: undefined,
-            top: undefined,
-            bottom: undefined,
-        }
-        this.color = "#AAAAAA"
-    }
-
-    getLines(usedEdges:number[]): Line[] {
+    getLines(usedEdges: number[]): Line[] {
         const lines: Line[] = []
 
         Object.keys(this.connections).forEach(direction => {

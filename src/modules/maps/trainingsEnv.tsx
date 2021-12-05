@@ -1,5 +1,5 @@
-import { NODE_SIZE } from "./const";
-import { Edge, Node } from "./models";
+import { NODE_SIZE } from "../const";
+import { Edge, Node } from "../models";
 
 const getTrainingsEnv = (): { nodes: Node[], edges: Edge[] } => {
 
@@ -69,7 +69,7 @@ const getTrainingsEnv = (): { nodes: Node[], edges: Edge[] } => {
     return { nodes, edges }
 }
 
-const addEdge = (n1: Node, n2: Node): Edge => {
+export const addEdge = (n1: Node, n2: Node): Edge => {
     let e = new Edge(n1, n2, 0)
 
     // above or bellow
