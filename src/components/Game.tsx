@@ -8,7 +8,7 @@ import { renderLines, renderAgents, renderIntersections } from "./render"
 
 const gym = new Gym(WIDTH, HEIGHT)
 
-const Canvas2d: React.FC = () => {
+const Game: React.FC = () => {
     const props = {
         width: WIDTH,
         height: HEIGHT
@@ -35,50 +35,44 @@ const Canvas2d: React.FC = () => {
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
             lastTime = time
-            //renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
-            //const usedIds = []
-            //renderLines(gym.agents[0].route.map(n => n.getLines(usedIds)).reduce((acc, x) => { return acc.concat(x) }, []), context, "#00FF00")
-            /* 
-                        gym.agents.forEach(a => {
-                            renderLines(getRouteLines(a), context, "#00FF00")
-                        }) */
 
             if (showSensors) {
                 renderLines(gym.sensorVisual, context, "#0000FF")
             }
             renderAgents(gym.agents, context)
 
-            // renderCrashed(gym.crashed, context)
-
             if (showIntersections) {
                 renderIntersections(gym.intersections, context)
             }
 
-            gym.step()
+            //gym.step()
         }
 
         requestAnimationFrame(frame)
         return () => cancelAnimationFrame(frameId)
     }, [])
 
-    return <div>
+    return <div className="grid grid-cols-2 border-2 border-black-500">
         <canvas ref={canvasRef} {...props} />
-        <button onClick={() => {
-            gym.pretrain = true
-            gym.pretrainEpoch = 0
-        }}>fast!</button>
-        <button onClick={() => {
-            console.log(gym.agents[0].nn.serialize())
-        }}>save</button>
-        {iter}
-        <button onClick={() => {
-            showSensors = !showSensors
-        }}>sensors</button>
-        <button onClick={() => {
-            showIntersections = !showIntersections
-        }
-        }>intersections</button>
+        <div>
+
+            <button onClick={() => {
+                gym.pretrain = true
+                gym.pretrainEpoch = 0
+            }}>fast!</button>
+            <button onClick={() => {
+                console.log(gym.agents[0].nn.serialize())
+            }}>save</button>
+            {iter}
+            <button onClick={() => {
+                showSensors = !showSensors
+            }}>sensors</button>
+            <button onClick={() => {
+                showIntersections = !showIntersections
+            }
+            }>intersections</button>
+        </div>
     </div>
 }
 
@@ -118,4 +112,4 @@ const checkpointsJson = (checkpoints: Line[]) => {
 
 
 
-export default Canvas2d;
+export default Game;

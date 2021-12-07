@@ -69,7 +69,12 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
+    "autoprefixer": "^10.4.0",
     "immer": "^9.0.7",
+    "postcss": "^8.4.4",
+    "postcss-loader": "^6.2.1",
+    "postcss-preset-env": "^7.0.1",
+    "tailwindcss": "^2.2.19",
     "zustand": "^3.6.5"
   }
 }
