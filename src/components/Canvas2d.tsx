@@ -14,7 +14,7 @@ const Canvas2d: React.FC = () => {
     }
 
     const canvasRef = useRef(null)
-    const [iter, setIter] = useState(0)
+    const [iter, setIter] = useState("0")
 
     let showIntersections = false
     let showSensors = false
@@ -28,26 +28,27 @@ const Canvas2d: React.FC = () => {
         const frame = time => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
+            setIter(timeDelta.toFixed(2))
             if (timeDelta < 1000 / 60) return
-            context.fillStyle = "rgb(120, 120, 120)";
+            context.fillStyle = "rgb(140, 140, 140)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
             lastTime = time
-
             //renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
-            //renderLines(gym.checkpoints, context, "#00FF00")
-
-            gym.agents.forEach(a => {
-                renderLines(getRouteLines(a), context, "#00FF00")
-            })
+            //const usedIds = []
+            //renderLines(gym.agents[0].route.map(n => n.getLines(usedIds)).reduce((acc, x) => { return acc.concat(x) }, []), context, "#00FF00")
+            /* 
+                        gym.agents.forEach(a => {
+                            renderLines(getRouteLines(a), context, "#00FF00")
+                        }) */
 
             if (showSensors) {
                 renderLines(gym.sensorVisual, context, "#0000FF")
             }
             renderAgents(gym.agents, context)
 
-            renderCrashed(gym.crashed, context)
+            // renderCrashed(gym.crashed, context)
 
             if (showIntersections) {
                 renderIntersections(gym.intersections, context)
@@ -119,16 +120,16 @@ const renderNodes = (nodes: Node[], context) => {
 const renderAgents = (agents: Agent[], context) => {
     agents.filter(a => a.alive).forEach(a => {
         context.save()
-        if (a.alive) {
-            context.fillStyle = "rgb(255, 255, 0)";
+        if (a.highlighted) {
+            context.fillStyle = `rgba(${a.color.r}, ${a.color.g}, ${a.color.b},100)`;
         } else {
-            context.fillStyle = "#FF0000"
+            context.fillStyle = `rgba(255,255,255,50)`;
         }
         const s = NODE_SIZE * 0.5
         const aX = a.pos.x
         const aY = a.pos.y
         context.translate(aX, aY)
-        context.rotate(degToRad(a.acc.heading()))
+        context.rotate(degToRad(a.dir.heading()))
         context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
         context.fillStyle = "#000000"
         context.font = "30px Arial";
@@ -138,7 +139,7 @@ const renderAgents = (agents: Agent[], context) => {
 }
 
 
-const renderCrashed = (crashed: { dir: Vector, pos: Vector }[], context) => {
+const renderCrashed = (crashed: Agent[], context) => {
     crashed.forEach(a => {
         context.save()
         context.fillStyle = "#FF0000"
@@ -168,7 +169,7 @@ const renderIntersections = (intersections: Vector[], context) => {
 const nodesJson = (lines: Line[]) => {
     let s = '[\n'
     lines.forEach(l => {
-        s += `new Line(${l.p1.x},${l.p1.y},${l.p2.x},${l.p2.y}),\n`
+        s += `new Line(${l.p1.x}, ${l.p1.y}, ${l.p2.x}, ${l.p2.y}), \n`
     })
     s += ']'
     console.log(s)
@@ -177,7 +178,7 @@ const nodesJson = (lines: Line[]) => {
 const checkpointsJson = (checkpoints: Line[]) => {
     let c = '[\n'
     checkpoints.forEach(l => {
-        c += `new Line(${l.p1.x},${l.p1.y},${l.p2.x},${l.p2.y}),\n`
+        c += `new Line(${l.p1.x}, ${l.p1.y}, ${l.p2.x}, ${l.p2.y}), \n`
     })
     c += ']'
     console.log(c)

@@ -8,7 +8,8 @@ export const generateRandomTrainingsMap = (n: number) => {
     const nodes: Node[] = []
     const edges: Edge[] = []
 
-    const n0 = new Node(0, WIDTH / 2, HEIGHT / 2)
+    //const n0 = new Node(0, WIDTH / 2, HEIGHT / 2)
+    const n0 = new Node(0, NODE_SIZE * 2, NODE_SIZE * 2)
     nodes.push(n0)
     const n1 = getNodeInDirection(Direction.right, n0)
     nodes.push(n1)
@@ -50,55 +51,55 @@ export const generateRandomTrainingsMap = (n: number) => {
     nodes.map((e, i) => e.id = i)
 
     // random edges
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 150; i++) {
         let n = nodes[randInt(0, nodes.length - 1)]
-        if (n.connections.bottom === undefined) {
-            let added = false
-            nodes.filter(n2 => n2 !== n).forEach(n2 => {
-                if (added) return
-                if (n2.pos.x === n.pos.x && n2.pos.y === n.pos.y + 3 * NODE_SIZE) {
-                    edges.push(addEdge(n, n2))
-                    added = true
-                }
-            })
-            continue
-        }
 
-        if (n.connections.top === undefined) {
-            let added = false
-            nodes.filter(n2 => n2).forEach(n2 => {
-                if (added) return
-                if (n2.pos.x === n.pos.x && n2.pos.y === n.pos.y - 3 * NODE_SIZE) {
-                    edges.push(addEdge(n, n2))
-                    added = true
-                }
-            })
-            continue
-        }
+        const direction = randInt(0, 4)
 
-        if (n.connections.left === undefined) {
-            let added = false
-            nodes.filter(n2 => n2).forEach(n2 => {
-                if (added) return
-                if (n2.pos.x === n.pos.x - 3 * NODE_SIZE && n2.pos.y === n.pos.y) {
-                    edges.push(addEdge(n, n2))
-                    added = true
+        if (direction === 0) {
+            if (n.connections.bottom === undefined) {
+                for (let j = 0; j < nodes.length; j++) {
+                    const n2 = nodes[j]
+                    if (n == n2) continue
+                    if (n2.pos.x === n.pos.x && n2.pos.y === n.pos.y + 3 * NODE_SIZE) {
+                        edges.push(addEdge(n, n2))
+                        break;
+                    }
                 }
-            })
-            continue
-        }
-
-
-        if (n.connections.right === undefined) {
-            let added = false
-            nodes.filter(n2 => n2).forEach(n2 => {
-                if (added) return
-                if (n2.pos.x === n.pos.x + 3 * NODE_SIZE && n2.pos.y === n.pos.y) {
-                    edges.push(addEdge(n, n2))
-                    added = true
+            }
+        } else if (direction === 1) {
+            if (n.connections.top === undefined) {
+                for (let j = 0; j < nodes.length; j++) {
+                    const n2 = nodes[j]
+                    if (n == n2) continue
+                    if (n2.pos.x === n.pos.x && n2.pos.y === n.pos.y - 3 * NODE_SIZE) {
+                        edges.push(addEdge(n, n2))
+                        break;
+                    }
                 }
-            })
-            continue
+            }
+        } else if (direction === 2) {
+            if (n.connections.left === undefined) {
+                for (let j = 0; j < nodes.length; j++) {
+                    const n2 = nodes[j]
+                    if (n == n2) continue
+                    if (n2.pos.x === n.pos.x - 3 * NODE_SIZE && n2.pos.y === n.pos.y) {
+                        edges.push(addEdge(n, n2))
+                        break;
+                    }
+                }
+            }
+        } else if (direction === 3) {
+            if (n.connections.right === undefined) {
+                for (let j = 0; j < nodes.length; j++) {
+                    const n2 = nodes[j]
+                    if (n == n2) continue
+                    if (n2.pos.x === n.pos.x + 3 * NODE_SIZE && n2.pos.y === n.pos.y) {
+                        edges.push(addEdge(n, n2))
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -116,7 +117,7 @@ export const generateNextNode = (startNode: Node, edges: Edge[]): Node | undefin
     directions.forEach(direction => {
         let possibleNextNode = getNodeInDirection(direction, startNode)
         const { x, y } = possibleNextNode.pos
-        if (x < 0 || x > WIDTH || y < 0 || y > HEIGHT) return
+        if (x < NODE_SIZE * 2 || x > WIDTH - NODE_SIZE * 2 || y < NODE_SIZE * 2 || y > HEIGHT - NODE_SIZE * 2) return
 
         let line = new Line(startNode.pos.x, startNode.pos.y, possibleNextNode.pos.x, possibleNextNode.pos.y)
         let intersections = edges.filter(e => !startNode.getEdges().includes(e)).filter(e => isVector(checkLineIntersection(e.getLine(), line))).length

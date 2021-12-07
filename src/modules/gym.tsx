@@ -1,12 +1,12 @@
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
-import Agent, { AgentSettings, Sensor, SpawnSettings } from "./agent"
+import Agent, { AgentSettings, SpawnSettings } from "./agent"
 import { NODE_SIZE } from "./const"
-import { randInt } from "./maps/cityGeneration"
+import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
+import genRandomCity, { randInt } from "./maps/cityGeneration"
 import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
-import { checkLineIntersection, map } from "./math"
-import { PretrainedModel, PretrainedModel2 } from "./model"
-import { isVector, Line, Node, Vector } from "./models"
+import { PretrainedModel2 } from "./model"
+import { Line, Node, Vector } from "./models"
 
 class Sector {
     x1: number
@@ -59,7 +59,7 @@ export class Gym {
     allRoutes: { l: number, routes: Node[][] }[]
     selectedRoutes: Node[][]
 
-    crashed: { dir: Vector, pos: Vector }[]
+    crashed: Agent[]
     fewestCrashes: number
 
     constructor(width, height) {
@@ -67,7 +67,7 @@ export class Gym {
         this.height = height
         this.agentSettings = {
             steerRange: 10,
-            velReduction: 1.20,
+            velReduction: 1.25,
             sensorSettings: {
                 num: 9,
                 len: NODE_SIZE * 3,
@@ -76,7 +76,7 @@ export class Gym {
         }
 
         this.settings = {
-            popSize: 10
+            popSize: 1
         }
 
         this.mostCheckpoints = -1
@@ -85,7 +85,7 @@ export class Gym {
         this.pretrainEpoch = 0
         this.pretrainEpochs = 100
         this.pretrain = false
-        this.maxIter = 5000
+        this.maxIter = 10000
 
         this.intersections = []
         this.sensorVisual = []
@@ -101,11 +101,15 @@ export class Gym {
 
     init() {
         this.nodes = generateRandomTrainingsMap(250)
-        this.createAllRoutesDict()
 
+        this.allRoutes = getAllRoutesDict(this.nodes)
+        for (let i = 0; i < 10; i++) {
+            this.allRoutes[i].routes.forEach(r => {
+                this.selectedRoutes.push(r)
+            })
+        }
 
         this.addAgents()
-
         this.addRoads()
     }
 
@@ -145,74 +149,22 @@ export class Gym {
         this.agents.push(agent)
     }
 
-    createAllRoutesDict() {
-        const routeLengthDict = {}
-        // calculate length between all nodes
-        for (let i = 0; i < this.nodes.length; i++) {
-            for (let j = 0; j < this.nodes.length; j++) {
-                if (i == j) continue
-                let path = search(this.nodes, this.nodes[i], this.nodes[j])
-                if (routeLengthDict[path.length]) {
-                    routeLengthDict[path.length].push(path)
-                } else {
-                    routeLengthDict[path.length] = [path]
-                }
-            }
-        }
-
-        const sorted: { l: number, routes: Node[][] }[] = []
-        Object.keys(routeLengthDict).forEach(k => {
-            sorted.push({ "l": +k, routes: routeLengthDict[k] })
-        })
-
-        sorted.sort((a, b) => a.l > b.l ? -1 : 0)
-
-        this.allRoutes = sorted
-        for (let i = 0; i < 10; i++) {
-            sorted[i].routes.forEach(r => {
-                this.selectedRoutes.push(r)
-            })
-        }
-    }
-
     step() {
         const evaluate = () => {
             console.log("-----")
             // eval
             this.iteration = 0
-            this.agents = this.agents.filter(a => a.alive)
-            this.agents.sort((a, b) => a.reachedCheckpoints > b.reachedCheckpoints ? -1 : 0)
 
-            const mostCheckpoints = this.agents[0].reachedCheckpoints
-            if (mostCheckpoints > this.mostCheckpoints) {
-                console.log({ mostCheckpoints })
+            const allAgents = [...this.agents, ...this.crashed]
+            allAgents.sort((a, b) => a.lifetime > b.lifetime ? -1 : 0)
+
+            const lifetime = allAgents[0].lifetime
+            if (lifetime > this.mostCheckpoints) {
+                console.log({ lifetime })
                 //this.pretrain = false
-                this.mostCheckpoints = mostCheckpoints
-                this.bestNeuralNet = this.agents[0].nn.copy()
+                this.mostCheckpoints = lifetime
+                this.bestNeuralNet = allAgents[0].nn.copy()
             }
-
-            if (this.crashed.length < this.fewestCrashes) {
-                this.fewestCrashes = this.crashed.length
-
-                if (this.agents[0].reachedCheckpoints === this.mostCheckpoints) {
-                    console.log("new nn")
-                    this.bestNeuralNet = this.agents[0].nn.copy()
-                }
-            }
-
-
-            if (this.epoch > 35 && this.mostCheckpoints < 3) {
-                this.agents.map(a => a.nn.mutate(0.1))
-                this.epoch = 0
-                console.log("---Great reset---")
-            } else {
-                for (let i = 1; i < this.agents.length; i++) {
-                    const x = this.bestNeuralNet.copy()
-                    x.mutate(0.1)
-                    this.agents[i].nn = x
-                }
-            }
-            this.agents.map(a => { a.reset(); a.overallCheckpoints = 0 })
 
             if (this.pretrain && this.pretrainEpoch > this.pretrainEpochs) {
                 this.pretrain = false
@@ -226,6 +178,8 @@ export class Gym {
 
             this.crashed = []
 
+            this.agents = []
+
             this.epoch++
         }
 
@@ -234,11 +188,12 @@ export class Gym {
             this.sensorVisual = []
 
             this.agents.filter(a => !a.alive).map(dead => {
-                this.crashed.push({ dir: dead.dir, pos: dead.pos })
+                this.crashed.push(dead)
             })
 
             this.agents = this.agents.filter(a => a.alive)
             this.agents = this.agents.filter(a => a.tickSinceLastCP < 100)
+
             this.agents.forEach(a => {
                 // transform sensors to current position & direction
                 const transformedSensors = a.sensors.map(sensor => transformSensor(sensor, a))
@@ -260,12 +215,11 @@ export class Gym {
                 }
 
                 a.update(inputs)
+                a.highlighted = false
             })
 
-            while (this.agents.length < this.settings.popSize) {
-                const route = this.selectedRoutes[randInt(0, this.selectedRoutes.length - 1)]
-                this.spawnAgent(route, true)
-            }
+            this.agents.sort((a, b) => a.lifetime > b.lifetime ? -1 : 0)
+            this.agents[0].highlighted = true
         }
 
         const loop = () => {
@@ -280,6 +234,11 @@ export class Gym {
                 if (this.pretrain) {
                     this.pretrainEpoch++
                 }
+            }
+
+            while (this.agents.length < this.settings.popSize) {
+                const route = this.selectedRoutes[randInt(0, this.selectedRoutes.length - 1)]
+                this.spawnAgent(route, true)
             }
         }
 
@@ -309,133 +268,6 @@ export class Gym {
 
         return r
     }
-}
-
-const getCheckpoints = (path: Node[]): Line[] => {
-    // generates checkpoints for a list of nodes
-    // checkpoint direction depends on the following node
-    // this way a route of checkpoints is generated that the agent follows
-    const checkpoints: Line[] = []
-
-    for (let i = 0; i < path.length - 1; i++) {
-        const node = path[i]
-        const nextNode = path[i + 1]
-        Object.keys(node.connections).some(k => {
-            if (node.connections[k] === undefined) return
-
-            if (node.connections[k].startNode === nextNode || node.connections[k].endNode === nextNode) {
-                checkpoints.push(getCheckpoint(node.pos, k))
-                return true
-            }
-        })
-    }
-    return checkpoints
-}
-
-const getCheckpoint = (pos, direction) => {
-    if (direction === "top") {
-        return new Line(pos.x - NODE_SIZE, pos.y - NODE_SIZE, pos.x + NODE_SIZE, pos.y - NODE_SIZE)
-    }
-    if (direction === "right") {
-        return new Line(pos.x + NODE_SIZE, pos.y - NODE_SIZE, pos.x + NODE_SIZE, pos.y + NODE_SIZE)
-    }
-    if (direction === "left") {
-        return new Line(pos.x - NODE_SIZE, pos.y - NODE_SIZE, pos.x - NODE_SIZE, pos.y + NODE_SIZE)
-    }
-    if (direction === "bottom") {
-        return new Line(pos.x - NODE_SIZE, pos.y + NODE_SIZE, pos.x + NODE_SIZE, pos.y + NODE_SIZE)
-    }
-}
-
-function getSensorIntersectionsWith(agent: Agent, transformedSensors: Line[], otherObjects: Line[]) {
-    const inputs = []
-    const intersectionPoints = []
-    transformedSensors.forEach(sensor => {
-        let closest = Infinity
-        let closestIntersectionPoint: boolean | Vector = false
-        otherObjects.forEach(line => {
-            const intersectionPoint = checkLineIntersection(sensor, line)
-            if (isVector(intersectionPoint)) {
-                if (agent.pos.dist(intersectionPoint) < closest) {
-                    closestIntersectionPoint = intersectionPoint
-                    closest = agent.pos.dist(intersectionPoint)
-                }
-            }
-        })
-
-        if (isVector(closestIntersectionPoint)) {
-            intersectionPoints.push(closestIntersectionPoint)
-            inputs.push(map(closestIntersectionPoint.dist(agent.pos), 0, agent.settings.sensorSettings.len, 0, 1))
-        } else {
-            inputs.push(1)
-        }
-    })
-
-    return [inputs, intersectionPoints]
-}
-
-function transformSensor(s: Sensor, agent: Agent) {
-    const current = s.pos.copy()
-    current.rotate(s.rot + agent.dir.heading())
-    current.add(agent.pos)
-    return new Line(current.x, current.y, agent.pos.x, agent.pos.y)
-}
-
-
-const getBody = (agent: Agent): Line[] => {
-    return [new Line(agent.pos.x - 5, agent.pos.y, agent.pos.x + 5, agent.pos.y),
-    new Line(agent.pos.x, agent.pos.y - 5, agent.pos.x, agent.pos.y + 5)]
-}
-
-const agentsCollisions = (agent: Agent, roads: Line[], checkpoints: Line[]): boolean => {
-    const body = getBody(agent)
-    handleCollisions(agent, body, roads)
-    return handleCheckpoints(agent, body, checkpoints)
-}
-
-const handleCollisions = (agent: Agent, body: Line[], roads: Line[]) => {
-    // check collision with roads
-    body.forEach(part => {
-        roads.forEach(wall => {
-            if (isVector(checkLineIntersection(part, wall))) {
-                agent.kill()
-                //should kill the loop
-                return
-            }
-        })
-    })
-}
-
-const handleCheckpoints = (agent: Agent, body: Line[], checkpoints: Line[]): boolean => {
-    agent.tickSinceLastCP++
-    let collWithLastCp = false
-    body.forEach(part => {
-        const targetCP = checkpoints[agent.reachedCheckpoints % checkpoints.length]
-        if (isVector(checkLineIntersection(part, targetCP))) {
-            agent.tickSinceLastCP = 0
-            agent.reachedCheckpoints++
-            if (!collWithLastCp) {
-                collWithLastCp = agent.reachedCheckpoints === checkpoints.length
-                return collWithLastCp
-            }
-        }
-    })
-    return collWithLastCp
-}
-
-export const directionOfNodes = (n1: Node, n2: Node): Vector => {
-    let x = 0
-    let y = 0
-    if (n1.connections.left !== undefined && n1.connections.left.getOther(n1.id).id === n2.id) {
-        x = -1
-    } else if (n1.connections.right !== undefined && n1.connections.right.getOther(n1.id).id === n2.id) {
-        x = 1
-    } else if (n1.connections.top !== undefined && n1.connections.top.getOther(n1.id).id === n2.id) {
-        y = -1
-    } else if (n1.connections.bottom !== undefined && n1.connections.bottom.getOther(n1.id).id === n2.id) {
-        y = 1
-    }
-    return new Vector(x, y)
 }
 
 export default Gym

@@ -2,7 +2,8 @@ import { map } from "./math";
 import { Line, Vector } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
-import { directionOfNodes } from './gym'
+import { randInt } from "./maps/cityGeneration";
+import { directionOfNodes } from "./etc";
 
 export interface AgentSettings {
     velReduction: number,
@@ -44,6 +45,13 @@ class Agent {
     tickSinceLastCP: number
     route: Node[]
     lifetime: number
+    color: {
+        r: number,
+        g: number,
+        b: number,
+        h: number,
+    }
+    highlighted: boolean
 
     constructor(spawnSettings: SpawnSettings, settings: AgentSettings, nn?: NeuralNetwork) {
         const hidL = Math.floor(((settings.sensorSettings.num * 2) + 2) / 2)
@@ -63,6 +71,14 @@ class Agent {
         this.overallCheckpoints = 0
         this.reachedCheckpoints = 0
         this.lifetime = 0
+
+        this.color = {
+            r: randInt(0, 256),
+            g: randInt(0, 256),
+            b: randInt(0, 256),
+            h: randInt(0, 101),
+        }
+        this.highlighted = false
     }
 
     changeRoute(route) {
