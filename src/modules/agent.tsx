@@ -2,6 +2,7 @@ import { map } from "./math";
 import { Line, Vector } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
+import { directionOfNodes } from './gym'
 
 export interface AgentSettings {
     velReduction: number,
@@ -33,6 +34,7 @@ class Agent {
     alive: boolean
     isBest: boolean
     reachedCheckpoints: number
+    overallCheckpoints: number
     acc: Vector
     vel: Vector
     dir: Vector
@@ -41,6 +43,7 @@ class Agent {
     nn: NeuralNetwork
     tickSinceLastCP: number
     route: Node[]
+    lifetime: number
 
     constructor(spawnSettings: SpawnSettings, settings: AgentSettings, nn?: NeuralNetwork) {
         const hidL = Math.floor(((settings.sensorSettings.num * 2) + 2) / 2)
@@ -57,6 +60,16 @@ class Agent {
         this.size = new Vector(20, 40)
         this.reset()
         this.initSensors(settings.sensorSettings)
+        this.overallCheckpoints = 0
+        this.reachedCheckpoints = 0
+        this.lifetime = 0
+    }
+
+    changeRoute(route) {
+        this.route = route
+        this.spawnSettings.direction = directionOfNodes(route[0], route[1])
+        this.spawnSettings.startPos = route[0].pos.copy();
+        this.pos = this.spawnSettings.startPos.copy()
     }
 
     reset() {
@@ -92,6 +105,7 @@ class Agent {
     }
 
     update(input) {
+        this.lifetime++
         const output = this.nn.predict(input)
         const velMag = this.vel.mag()
 

@@ -37,10 +37,17 @@ const Canvas2d: React.FC = () => {
             //renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
             //renderLines(gym.checkpoints, context, "#00FF00")
+
+            gym.agents.forEach(a => {
+                renderLines(getRouteLines(a), context, "#00FF00")
+            })
+
             if (showSensors) {
                 renderLines(gym.sensorVisual, context, "#0000FF")
             }
             renderAgents(gym.agents, context)
+
+            renderCrashed(gym.crashed, context)
 
             if (showIntersections) {
                 renderIntersections(gym.intersections, context)
@@ -71,6 +78,21 @@ const Canvas2d: React.FC = () => {
         }
         }>intersections</button>
     </div>
+}
+
+const getRouteLines = (agent: Agent) => {
+    const lines = {}
+    agent.route.map(n => {
+        n.getEdges().map(e => {
+            if (lines[e.id]) {
+                lines[e.id].cnt += 1
+            } else {
+                lines[e.id] = { cnt: 1, e }
+            }
+        })
+    })
+    const arr = Object.keys(lines).map(k => { return lines[k] })
+    return arr.filter(e => e.cnt === 2).map(cntObject => cntObject.e.getLine())
 }
 
 const renderLines = (lines: Line[], context, color) => {
@@ -114,6 +136,25 @@ const renderAgents = (agents: Agent[], context) => {
         //context.fillText(n.id, n.pos.x, n.pos.y);
     })
 }
+
+
+const renderCrashed = (crashed: { dir: Vector, pos: Vector }[], context) => {
+    crashed.forEach(a => {
+        context.save()
+        context.fillStyle = "#FF0000"
+        const s = NODE_SIZE * 0.5
+        const aX = a.pos.x
+        const aY = a.pos.y
+        context.translate(aX, aY)
+        context.rotate(degToRad(a.dir.heading()))
+        context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
+        context.fillStyle = "#000000"
+        context.font = "30px Arial";
+        context.restore()
+        //context.fillText(n.id, n.pos.x, n.pos.y);
+    })
+}
+
 
 const renderIntersections = (intersections: Vector[], context) => {
     intersections.forEach(i => {

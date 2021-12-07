@@ -37,7 +37,7 @@ export const generateRandomTrainingsMap = (n: number) => {
             // use prev node and repeat
             blockedNodes.push(node)
             node = nodes.filter(n => !blockedNodes.includes(n)).slice(-1)[0] // get earlier node
-            if (node === undefined) trys = 100000; console.log(`done at ${nodes.length}`)
+            if (node === undefined) trys = 100000
         } else {
             // node can be used: new edge creates no intersections with other edges
             edges.push(addEdge(node, newNode))
