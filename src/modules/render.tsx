@@ -1,7 +1,7 @@
-import Agent from "../modules/agent";
-import { NODE_SIZE } from "../modules/const";
-import { degToRad } from "../modules/math";
-import { Node, Line, Vector } from "../modules/models";
+import Agent from "./agent";
+import { NODE_SIZE } from "./const";
+import { degToRad } from "./math";
+import { Node, Line, Vector } from "./models";
 
 export const renderLines = (lines: Line[], context, color) => {
     context.strokeStyle = color
@@ -14,13 +14,22 @@ export const renderLines = (lines: Line[], context, color) => {
     })
 }
 
-export const renderNodes = (nodes: Node[], context) => {
+export const renderNodes = (nodes: Node[], context, color: string, highlightedNode: Node) => {
     nodes.forEach(n => {
-        context.fillStyle = n.color
+        if (n === highlightedNode) {
+            context.fillStyle = "#00FF00"
+        } else {
+            context.fillStyle = color
+        }
         context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
-        context.fillStyle = "#000000"
-        context.font = "30px Arial";
-        //context.fillText(n.id, n.pos.x - (NODE_SIZE) + 2, n.pos.y + NODE_SIZE / 2);
+    })
+}
+
+export const renderStations = (nodes: Node[], context) => {
+    nodes.forEach(n => {
+        context.fillStyle = "rgb(255,255,0)"
+        context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
+        context.fill();
     })
 }
 

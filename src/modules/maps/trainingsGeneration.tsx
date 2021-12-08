@@ -1,5 +1,5 @@
 import { Direction, Edge, isVector, Line, Node, Vector } from "../models"
-import { randInt } from "../maps/cityGeneration"
+import { randInt } from "../math"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../const"
 import { addEdge } from "./trainingsEnv"
 import { checkLineIntersection } from "../math"

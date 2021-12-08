@@ -3,7 +3,7 @@ import { HEIGHT, WIDTH } from "../modules/const"
 import { Line } from "../modules/models"
 import Agent from "../modules/agent"
 import Gym from "../modules/gym"
-import { renderLines, renderAgents, renderIntersections } from "./render"
+import { renderLines, renderAgents, renderIntersections } from "../modules/render"
 
 
 const gym = new Gym(WIDTH, HEIGHT)

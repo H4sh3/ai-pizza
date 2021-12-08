@@ -1,35 +1,11 @@
-import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, SpawnSettings } from "./agent"
 import { NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
-import genRandomCity, { randInt } from "./maps/cityGeneration"
 import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
+import { randInt } from "./math"
 import { PretrainedModel2 } from "./model"
 import { Line, Node, Vector } from "./models"
-
-class Sector {
-    x1: number
-    x2: number
-    y1: number
-    y2: number
-    elements: Line[]
-    constructor(x1, y1, x2, y2) {
-        this.x1 = x1
-        this.x2 = x2
-        this.y1 = y1
-        this.y2 = y2
-
-        this.elements = []
-    }
-
-    inside(v: Vector) {
-        return v.x >= this.x1 &&
-            v.x <= this.x2 &&
-            v.y >= this.y1 &&
-            v.y <= this.y2
-    }
-}
 
 export class Gym {
     width: number
@@ -134,7 +110,7 @@ export class Gym {
     spawnAgent(route: Node[], mutate: boolean = false) {
         const spawnSettings: SpawnSettings = {
             direction: directionOfNodes(route[0], route[1]),
-            startPos: route[0].pos.copy(),
+            startNode: route[0],
         }
 
         const agent = new Agent(spawnSettings, this.agentSettings)
@@ -209,7 +185,7 @@ export class Gym {
                     const dir = directionOfNodes(newRoute[0], newRoute[1])
                     a.checkpoints = getCheckpoints(newRoute)
                     a.spawnSettings.direction = dir
-                    a.spawnSettings.startPos = newRoute[0].pos.copy()
+                    a.spawnSettings.startNode = newRoute[0]
                     a.route = newRoute
                     a.reset()
                 }

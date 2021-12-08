@@ -1,5 +1,5 @@
 import { HEIGHT, NODE_SIZE, WIDTH } from "../const";
-import { radToDeg, checkLineIntersection } from "../math";
+import { radToDeg, checkLineIntersection, randInt } from "../math";
 import { Edge, Node, Vector } from "../models";
 
 const config = {
@@ -13,40 +13,8 @@ const config = {
 }
 
 const genRandomCity = (): Node[] => {
-    let trys = 0
-
     let bestMap = generateGraph()
-
     return bestMap.nodes
-    let bestGraphCount = Infinity
-    let graphs = checkGraphes(bestMap.nodes)
-    let graphCount = Object.keys(graphs).length
-
-    while (graphCount !== 1 && trys < 5) {
-        const tmpMap = generateGraph()
-        graphs = checkGraphes(tmpMap.nodes)
-        let graphCount = Object.keys(graphs).length
-        if (graphCount < bestGraphCount) {
-            bestMap = tmpMap
-        }
-        trys++
-    }
-
-    // purge other nodes
-
-    graphs = checkGraphes(bestMap.nodes)
-    // use only nodes from most connected graph
-    const tmp = []
-    Object.keys(graphs).forEach(c => {
-        tmp.push({ "cnt": c, "nodes": graphs[c] })
-    })
-
-    tmp.sort((a, b) => a.cnt < b.cnt ? -1 : 0)
-
-    bestMap.nodes = tmp[0].nodes
-    console.log(bestMap.nodes.map(n => n.id))
-
-    return bestMap
 }
 
 const generateGraph = () => {
@@ -282,10 +250,6 @@ const getMinXmaxY = (nodes: Node[]): Node => {
         }
     })
     return node
-}
-
-export function randInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
 

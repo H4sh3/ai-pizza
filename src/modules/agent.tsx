@@ -2,7 +2,7 @@ import { map } from "./math";
 import { Line, Vector } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
-import { randInt } from "./maps/cityGeneration";
+import { randInt } from "./math";
 import { directionOfNodes } from "./etc";
 
 export interface AgentSettings {
@@ -13,7 +13,7 @@ export interface AgentSettings {
 
 export interface SpawnSettings {
     direction: Vector,
-    startPos: Vector
+    startNode: Node
 }
 
 export interface SensorSettings {
@@ -61,7 +61,7 @@ class Agent {
             this.nn = new NeuralNetwork(settings.sensorSettings.num * 2, hidL, 2)
         }
         this.spawnSettings = spawnSettings
-        this.pos = this.spawnSettings.startPos.copy();
+        this.pos = this.spawnSettings.startNode.pos.copy();
 
         this.settings = settings
 
@@ -84,12 +84,12 @@ class Agent {
     changeRoute(route) {
         this.route = route
         this.spawnSettings.direction = directionOfNodes(route[0], route[1])
-        this.spawnSettings.startPos = route[0].pos.copy();
-        this.pos = this.spawnSettings.startPos.copy()
+        this.spawnSettings.startNode = route[0];
+        this.pos = this.spawnSettings.startNode.pos.copy()
     }
 
     reset() {
-        this.pos = this.spawnSettings.startPos.copy()
+        this.pos = this.spawnSettings.startNode.pos.copy()
         this.acc = new Vector(0, 0)
         this.vel = new Vector(0, 0)
         this.dir = new Vector(this.spawnSettings.direction.x, this.spawnSettings.direction.y)

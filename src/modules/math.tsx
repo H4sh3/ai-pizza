@@ -14,6 +14,10 @@ export function map(v, s1, e1, s2, e2) {
     return (v - s1) / (e1 - s1) * (e2 - s2) + s2;
 }
 
+export function randInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
 export function checkLineIntersection(l1: Line, l2: Line): Vector | boolean {
     const x1 = l1.p1.x
     const y1 = l1.p1.y
