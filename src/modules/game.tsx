@@ -1,4 +1,4 @@
-import { PizzaDespawn } from "../components/GameUI"
+import { DespawnAnimation } from "../components/GameUI"
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, Route, SpawnSettings } from "./agent"
@@ -53,7 +53,9 @@ export class Game {
 
     tasks: Task[]
 
-    pizzaDespawns: PizzaDespawn[]
+    pizzaAnimation: DespawnAnimation[]
+    scrollingTexts: DespawnAnimation[]
+
 
     rerender: () => void
 
@@ -97,7 +99,8 @@ export class Game {
         this.init()
 
         // only graphical fancyness -> no functionality
-        this.pizzaDespawns = []
+        this.pizzaAnimation = []
+        this.scrollingTexts = []
     }
 
     init() {
@@ -225,28 +228,22 @@ export class Game {
                 if (finishedCurrentRoute) {
                     const finishedRoute = a.routes.shift()
                     if (!finishedRoute.isEnd) {
-                        const newRoute = a.routes[0]
-                        const dir = directionOfNodes(newRoute.nodes[0], newRoute.nodes[1])
-                        a.spawnSettings.direction = dir
-                        a.spawnSettings.startNode = newRoute.nodes[0]
+                        reroute(a, a.routes[0])
                         finishedRoute.task.deliverd = true
 
-                        const newDespawn: PizzaDespawn = {
-                            pos: a.pos.copy(),
-                            scaleF: 1
-                        }
-                        this.pizzaDespawns.push(newDespawn)
+                        this.addPizzaAnimation(finishedRoute)
+                        const profit = this.handleMoney(finishedRoute.nodes.length)
+                        this.scrollingTexts.push(
+                            {
+                                value: profit,
+                                pos: finishedRoute.nodes[finishedRoute.nodes.length - 1].pos.copy(),
+                                factor: 1
+                            }
+                        )
                     } else {
-                        // set home
-                        console.log(`finished ${finishedRoute.getStartNode().id} ->  ${finishedRoute.getEndNode().id}`)
                         a.spawnSettings.startNode = finishedRoute.nodes[finishedRoute.nodes.length - 1]
                         this.tasks = this.tasks.filter(t => t !== finishedRoute.task)
 
-                        this.gameState.points += finishedRoute.task.route.length
-                        this.gameState.money += finishedRoute.task.route.length * 2
-                        this.gameState.points = Math.floor(this.gameState.points)
-                        this.gameState.money = Math.floor(this.gameState.money)
-                        this.gameState.delivered++
                     }
                     a.reset()
                 }
@@ -255,7 +252,8 @@ export class Game {
         }
 
 
-        this.pizzaDespawns = this.pizzaDespawns.filter(d => d.scaleF >= 0)
+        this.pizzaAnimation = this.pizzaAnimation.filter(d => d.factor >= 0)
+        this.scrollingTexts = this.scrollingTexts.filter(d => d.factor >= 0)
 
         const availTasks = this.tasks.filter(t => !t.active)
         if (this.gameState.autoTaskAssign && availTasks.length > 0) {
@@ -294,6 +292,30 @@ export class Game {
 
         return r
     }
+
+    addPizzaAnimation(route: Route) {
+        const newDespawn: DespawnAnimation = {
+            pos: route.nodes[route.nodes.length - 1].pos.copy(),
+            factor: 1.5
+        }
+        this.pizzaAnimation.push(newDespawn)
+    }
+
+    handleMoney(nodeLength: number) {
+        const profit = nodeLength * 4
+        this.gameState.points += profit
+        this.gameState.money += profit
+        this.gameState.points = Math.floor(this.gameState.points)
+        this.gameState.money = Math.floor(this.gameState.money)
+        this.gameState.delivered++
+        return profit
+    }
+}
+
+const reroute = (agent: Agent, route: Route) => {
+    const dir = directionOfNodes(route.nodes[0], route.nodes[1])
+    agent.spawnSettings.direction = dir
+    agent.spawnSettings.startNode = route.nodes[0]
 }
 
 export default Game

@@ -1,4 +1,4 @@
-import { PizzaDespawn } from "../components/GameUI";
+import { DespawnAnimation } from "../components/GameUI";
 import Agent from "./agent";
 import { NODE_SIZE } from "./const";
 import { degToRad } from "./math";
@@ -47,7 +47,7 @@ export const renderAgents = (agents: Agent[], context) => {
         const aY = a.pos.y
         context.translate(aX, aY)
         context.rotate(degToRad(a.dir.heading()))
-        context.fillRect(- (s / 2), - (s / 2), s * 2.5, s)
+        context.fillRect(- (s / 2), - (s / 2), s * 2, s)
         context.restore()
 
         if (a.routes[0] && !a.routes[0].isEnd) {
@@ -59,14 +59,23 @@ export const renderAgents = (agents: Agent[], context) => {
 }
 
 
-export const renderPizzaDespawns = (despawns: PizzaDespawn[], context) => {
+export const renderPizzaAnimations = (despawns: DespawnAnimation[], context) => {
     despawns.forEach(d => {
         var img = document.getElementById("pizza");
-        context.drawImage(img, d.pos.x - s, d.pos.y - s, NODE_SIZE * d.scaleF, NODE_SIZE * d.scaleF);
-        d.scaleF -= 0.01
+        context.drawImage(img, d.pos.x - s, d.pos.y - s, NODE_SIZE * d.factor, NODE_SIZE * d.factor);
+        d.factor -= 0.01
     })
 }
 
+export const renderProfitTexts = (despawns: DespawnAnimation[], context) => {
+    despawns.forEach(d => {
+        context.fillStyle = "#00EE00"
+        context.font = "18px Arial";
+        context.fillText(`${d.value}$`, d.pos.x, d.pos.y);
+        d.pos.y -= 1
+        d.factor -= 0.02
+    })
+}
 
 export const renderCrashed = (crashed: Agent[], context) => {
     crashed.forEach(a => {

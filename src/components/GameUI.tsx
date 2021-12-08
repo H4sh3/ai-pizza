@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
-import { Node, Line, Vector } from "../modules/models"
+import { Node, Vector } from "../modules/models"
 import Agent from "../modules/agent"
-import { renderLines, renderAgents, renderIntersections, renderNodes, renderStations, renderPizzaDespawns } from "../modules/render"
+import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts } from "../modules/render"
 import Game from "../modules/game"
 
 
 const game = new Game(WIDTH, HEIGHT)
 
-const nodeSelectionRange = NODE_SIZE * 1.2;
+const nodeSelectionRange = NODE_SIZE * 1.5;
 
 const prices = {
     taskSheduler: 200,
@@ -17,9 +17,10 @@ const prices = {
 
 const allowedNeighbours = 1
 
-export interface PizzaDespawn {
+export interface DespawnAnimation {
     pos: Vector,
-    scaleF: number
+    factor: number,
+    value?: number
 }
 
 const GameUI: React.FC = () => {
@@ -78,7 +79,7 @@ const GameUI: React.FC = () => {
 
             renderAgents(game.agents, context)
             if (!game.gameState.firstNodePicked) {
-                const highlightedNode: Node = game.nodes.find(n => n.pos.dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
+                const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
                 renderNodes(game.nodes.filter(n => n.getNeightbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
             }
 
@@ -91,7 +92,8 @@ const GameUI: React.FC = () => {
                 renderNodes(game.tasks.filter(t => !t.deliverd && t.active).map(t => t.end), context, "rgba(0,200,0,0.4)")
             }
 
-            renderPizzaDespawns(game.pizzaDespawns, context)
+            renderPizzaAnimations(game.pizzaAnimation, context)
+            renderProfitTexts(game.scrollingTexts, context)
 
             renderLines(game.roads, context, "#FFFFFF")
             if (game.gameState.running) {
