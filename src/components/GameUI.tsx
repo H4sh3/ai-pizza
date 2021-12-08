@@ -2,13 +2,25 @@ import { useEffect, useRef, useState } from "react"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
 import { Node, Line, Vector } from "../modules/models"
 import Agent from "../modules/agent"
-import { renderLines, renderAgents, renderIntersections, renderNodes, renderStations } from "../modules/render"
+import { renderLines, renderAgents, renderIntersections, renderNodes, renderStations, renderPizzaDespawns } from "../modules/render"
 import Game from "../modules/game"
 
 
 const game = new Game(WIDTH, HEIGHT)
 
 const nodeSelectionRange = NODE_SIZE * 1.2;
+
+const prices = {
+    taskSheduler: 200,
+    agent: 1000,
+}
+
+const allowedNeighbours = 1
+
+export interface PizzaDespawn {
+    pos: Vector,
+    scaleF: number
+}
 
 const GameUI: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -38,11 +50,10 @@ const GameUI: React.FC = () => {
             // user is picking first node
             const pickedNode: Node = game.nodes.find(n => n.pos.dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
             if (pickedNode === undefined) return
+            if (pickedNode.getNeightbours().length > allowedNeighbours) return
 
             game.gameState.stations.push(pickedNode)
             game.gameState.firstNodePicked = true
-            game.spawnAgent(pickedNode)
-            game.spawnAgent(pickedNode)
             game.spawnAgent(pickedNode)
             game.addTasks(pickedNode, 3)
             game.gameState.running = true
@@ -65,14 +76,10 @@ const GameUI: React.FC = () => {
 
             lastTime = time
 
+            renderAgents(game.agents, context)
             if (!game.gameState.firstNodePicked) {
                 const highlightedNode: Node = game.nodes.find(n => n.pos.dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
-                renderNodes(game.nodes.filter(n => n.getNeightbours().length <= 2), context, "rgba(0,200,0,70)", highlightedNode)
-            }
-
-            if (game.agents.length > 0 && game.agents[0].routes.length > 0) {
-                const highlightedNode = game.agents[0].routes[0].nodes[game.agents[0].routes[0].nodes.length - 1]
-                renderNodes([highlightedNode], context, "rgba(0,200,0,70)", highlightedNode)
+                renderNodes(game.nodes.filter(n => n.getNeightbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
             }
 
             if (game.gameState.stations.length > 0) {
@@ -80,11 +87,13 @@ const GameUI: React.FC = () => {
             }
 
             if (game.tasks.length > 0) {
-                renderNodes(game.tasks.filter(t => !t.deliverd).map(t => t.end), context, "rgba(0,200,0,70)")
+                renderNodes(game.tasks.filter(t => !t.active).map(t => t.end), context, "rgba(100,100,100,0.2)")
+                renderNodes(game.tasks.filter(t => !t.deliverd && t.active).map(t => t.end), context, "rgba(0,200,0,0.4)")
             }
 
+            renderPizzaDespawns(game.pizzaDespawns, context)
+
             renderLines(game.roads, context, "#FFFFFF")
-            renderAgents(game.agents, context)
             if (game.gameState.running) {
                 game.step()
             }
@@ -97,55 +106,129 @@ const GameUI: React.FC = () => {
     const openTasks = game.tasks.filter(t => !t.active)
     const activeTasks = game.tasks.filter(t => t.active)
 
-    return <div className="flex flex-row border-2 border-black-500">
+    const borderGrayAndP = "border-2 border-gray-300 p-2"
+
+    return <div className="flex flex-row border-2 border-black-500 select-none">
         <div onMouseMove={onmousemove}
             onMouseDown={onmousedown}
+            className="p-2"
         >
             <canvas style={{ "border": "1px solid #000000" }} ref={canvasRef} {...props} />
         </div>
         <div className="p-5 flex flex-col gap-2">
             {game.gameState.firstNodePicked ?
-                <div className="flex flex-row gap-2">
-                    <TaskCol>
-                        <div className="underline">
-                            Open Tasks
+                <div className="flex flex-col gap-2">
+                    <div className={borderGrayAndP}>
+                        <div className="flex flex-row justify-between gap-2">
+                            <div>
+                                {`Points: ${game.gameState.points}`}
+                            </div>
+                            <div>
+                                {`Money: ${game.gameState.money}$`}
+                            </div>
                         </div>
-                        {
-                            openTasks.map((t, i) => {
-                                const disabled = game.agents.filter(a => a.routes.length === 0).length === 0
-                                return <div className={`${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white cursor-pointer'} text-center px-2 py-1 border-2 ${t.active ? "border-green-300" : "border-gray-100"} rounded-lg`}
-                                    onClick={() => {
-                                        if (disabled) return
-                                        game.activateTask(t)
-                                        RERENDER()
-                                    }}
-                                    key={i}>{t.end.id}
+                    </div>
+                    <div className={borderGrayAndP}>
+                        <div className="flex flex-row text-center items-center justify-around gap-2">
+                            <div className="flex flex-col gap-2 items-center">
+                                <img className="w-12 h-12" id="pizza" src="pizza.png" />
+                                <div>
+                                    {game.gameState.delivered}
                                 </div>
-                            })
-                        }
-                    </TaskCol>
-                    <TaskCol>
-                        <div className="underline">
-                            In progress
+                            </div>
+                            <div className="flex flex-col gap-2 items-center">
+                                <div>
+                                    Agents:
+                                </div>
+                                <div>
+                                    {game.agents.length}
+                                </div>
+                            </div>
                         </div>
-                        {
-                            activeTasks.map((t, i) => {
-                                const disabled = game.agents.filter(a => a.routes.length === 0).length === 0
-                                return <div className={`bg-white cursor-default text-center px-2 py-1 border-2 ${t.active ? "border-green-300" : "border-gray-100"} rounded-lg`}
-                                    key={i}>{t.end.id}
+                    </div>
+                    <div className={borderGrayAndP}>
+                        <div className="flex flex-col gap-2">
+                            <div className="underline text-center">Shop</div>
+                            {
+                                game.gameState.autoTaskAssign ? <></>
+                                    :
+                                    <Button
+                                        disabled={game.gameState.money < prices.taskSheduler}
+                                        onClick={
+                                            () => {
+                                                game.gameState.money -= prices.taskSheduler
+                                                game.gameState.autoTaskAssign = true
+                                            }
+                                        }>{`Task sheduler - ${prices.taskSheduler}$`}</Button>
+                            }
+                            <Button
+                                disabled={game.gameState.money < prices.agent}
+                                onClick={
+                                    () => {
+                                        game.gameState.money -= prices.agent
+                                        game.spawnAgent(game.gameState.stations[0])
+                                    }
+                                }>{`Agent - ${prices.agent}$`}</Button>
+                        </div>
+                    </div>
+                    <div className="h-full">
+                        <div className="flex flex-row gap-2">
+                            <TaskCol>
+                                <div className="underline">
+                                    Open tasks
                                 </div>
-                            })
-                        }
-                    </TaskCol>
+                                {
+                                    openTasks.map((t, i) => {
+                                        const disabled = game.agents.filter(a => a.routes.length === 0).length === 0
+                                        return <div className={`${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white cursor-pointer'} text-center px-2 py-1 border-2 ${t.active ? "border-green-300" : "border-gray-100"} rounded-lg`}
+                                            onClick={() => {
+                                                if (disabled) return
+                                                game.activateTask(t)
+                                                RERENDER()
+                                            }}
+                                            key={i}>
+                                            {`Delivery to Nr. ${t.end.id}`}
+                                        </div>
+                                    })
+                                }
+                            </TaskCol>
+                            <TaskCol>
+                                <div className="underline">
+                                    Active tasks
+                                </div>
+                                {
+                                    activeTasks.map((t, i) => {
+                                        return <div className={`bg-white cursor-default text-center px-2 py-1 border-2 ${t.active ? "border-green-300" : "border-gray-100"} rounded-lg`}
+                                            key={i}>
+                                            {`Delivering to Nr. ${t.end.id}`}
+                                        </div>
+                                    })
+                                }
+                            </TaskCol>
+                        </div>
+                    </div>
+
                 </div>
                 :
                 <Task
                     title={"1.) Pick your first station!"}
-                    text={"Start by placing your first station. This is from where your agents will start to deliver pizza!"}
-                />
+                >
+                    <div className="">
+                        <div>
+                            As the CEO of AI-Pizza Corp your only goal is to deliver as many pizzas as possible.
+                        </div>
+                        <div>
+                            Don't worry you wont have to deliver them yourself, its the future and self driving Pizza-delivery-agents exist already.
+                        </div>
+                        <div>
+                            Start by placing your first station, this is where your agents will spawn.
+                        </div>
+                    </div>
+                </Task>
+
             }
         </div>
-    </div>
+    </div >
 }
 
 
@@ -158,26 +241,30 @@ const TaskCol: React.FC = ({ children }) => {
 
 interface TaskProps {
     title: string
-    text: string
 }
 
-const Task: React.FC<TaskProps> = ({ text, title }) => {
-    return <div className="flex flex-col text-center p-2 bg-gray-300 border-green-500 border-2 rounded-xl gap-2">
-        <div className="font-bold text-xl text-gray-700">
+const Task: React.FC<TaskProps> = ({ title, children }) => {
+    return <div className="flex flex-col p-2 bg-gray-300 border-green-500 border-2 rounded-xl gap-2">
+        <div className="text-center font-bold text-xl text-gray-700">
             {title}
         </div>
         <div className="p-2 bg-white rounded-xl">
-            {text}
+            {children}
         </div>
     </div>
 }
 
 interface ButtonProps {
     onClick: () => void
+    disabled?: boolean
 }
 
-const Button: React.FC<ButtonProps> = ({ onClick, children }) => {
-    return <div className="text-center px-2 py-1 select-none border-green-500 bg-white rounded-lg border-2 hover:bg-green-300 cursor-pointer" onClick={onClick}>
+const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) => {
+    return <div className={`${disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
+        onClick={() => {
+            if (disabled) return
+            onClick()
+        }}>
         {children}
     </div>
 }
@@ -198,26 +285,5 @@ const getRouteLines = (agent: Agent) => {
     const arr = Object.keys(lines).map(k => { return lines[k] })
     return arr.filter(e => e.cnt === 2).map(cntObject => cntObject.e.getLine())
 }
-
-
-const nodesJson = (lines: Line[]) => {
-    let s = '[\n'
-    lines.forEach(l => {
-        s += `new Line(${l.p1.x}, ${l.p1.y}, ${l.p2.x}, ${l.p2.y}), \n`
-    })
-    s += ']'
-    console.log(s)
-}
-
-const checkpointsJson = (checkpoints: Line[]) => {
-    let c = '[\n'
-    checkpoints.forEach(l => {
-        c += `new Line(${l.p1.x}, ${l.p1.y}, ${l.p2.x}, ${l.p2.y}), \n`
-    })
-    c += ']'
-    console.log(c)
-}
-
-
 
 export default GameUI;

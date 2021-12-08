@@ -1,3 +1,4 @@
+import { PizzaDespawn } from "../components/GameUI";
 import Agent from "./agent";
 import { NODE_SIZE } from "./const";
 import { degToRad } from "./math";
@@ -33,6 +34,7 @@ export const renderStations = (nodes: Node[], context) => {
     })
 }
 
+const s = NODE_SIZE * 0.5
 export const renderAgents = (agents: Agent[], context) => {
     agents.filter(a => a.alive).forEach(a => {
         context.save()
@@ -41,16 +43,27 @@ export const renderAgents = (agents: Agent[], context) => {
         } else {
             context.fillStyle = `rgba(255,255,255,50)`;
         }
-        const s = NODE_SIZE * 0.5
         const aX = a.pos.x
         const aY = a.pos.y
         context.translate(aX, aY)
         context.rotate(degToRad(a.dir.heading()))
-        context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
-        context.fillStyle = "#000000"
-        context.font = "30px Arial";
+        context.fillRect(- (s / 2), - (s / 2), s * 2.5, s)
         context.restore()
+
+        if (a.routes[0] && !a.routes[0].isEnd) {
+            var img = document.getElementById("pizza");
+            context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
+        }
         //context.fillText(n.id, n.pos.x, n.pos.y);
+    })
+}
+
+
+export const renderPizzaDespawns = (despawns: PizzaDespawn[], context) => {
+    despawns.forEach(d => {
+        var img = document.getElementById("pizza");
+        context.drawImage(img, d.pos.x - s, d.pos.y - s, NODE_SIZE * d.scaleF, NODE_SIZE * d.scaleF);
+        d.scaleF -= 0.01
     })
 }
 

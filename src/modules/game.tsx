@@ -1,3 +1,4 @@
+import { PizzaDespawn } from "../components/GameUI"
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, Route, SpawnSettings } from "./agent"
@@ -41,12 +42,18 @@ export class Game {
 
     gameState: {
         numAgents: number,
+        delivered: number,
         running: boolean,
         stations: Node[],
-        firstNodePicked: boolean
+        firstNodePicked: boolean,
+        money: number,
+        points: number,
+        autoTaskAssign: boolean
     }
 
     tasks: Task[]
+
+    pizzaDespawns: PizzaDespawn[]
 
     rerender: () => void
 
@@ -78,12 +85,19 @@ export class Game {
 
         this.gameState = {
             numAgents: 1,
+            delivered: 0,
             running: false,
             stations: [],
-            firstNodePicked: false
+            firstNodePicked: false,
+            money: 1250,
+            points: 0,
+            autoTaskAssign: false
         }
 
         this.init()
+
+        // only graphical fancyness -> no functionality
+        this.pizzaDespawns = []
     }
 
     init() {
@@ -122,13 +136,15 @@ export class Game {
     }
 
     activateTask(task: Task) {
-        // task got activated! add route to agent; set task to pending
-        this.tasks.find(t => t === task).active = true
-        console.log(`${this.agents
-            .filter(a => a.routes.length === 0).length} without task!`)
-        const agent = this.agents
+        // task got activated! add route to agent; set task to active
+        const availableAgents = this.agents
             .filter(a => a.routes.length === 0) // has no task
-            .filter(a => a.spawnSettings.startNode === task.start)[0] // works at tasks station
+            .filter(a => a.spawnSettings.startNode === task.start) // works at tasks station
+
+        if (availableAgents.length === 0) return
+
+        task.active = true
+        const agent = availableAgents[0]
 
         const toTarget: Route = new Route(task, task.route, getCheckpoints(task.route), false)
         agent.routes.push(toTarget)
@@ -214,29 +230,48 @@ export class Game {
                         a.spawnSettings.direction = dir
                         a.spawnSettings.startNode = newRoute.nodes[0]
                         finishedRoute.task.deliverd = true
+
+                        const newDespawn: PizzaDespawn = {
+                            pos: a.pos.copy(),
+                            scaleF: 1
+                        }
+                        this.pizzaDespawns.push(newDespawn)
                     } else {
                         // set home
                         console.log(`finished ${finishedRoute.getStartNode().id} ->  ${finishedRoute.getEndNode().id}`)
                         a.spawnSettings.startNode = finishedRoute.nodes[finishedRoute.nodes.length - 1]
                         this.tasks = this.tasks.filter(t => t !== finishedRoute.task)
+
+                        this.gameState.points += finishedRoute.task.route.length
+                        this.gameState.money += finishedRoute.task.route.length * 2
+                        this.gameState.points = Math.floor(this.gameState.points)
+                        this.gameState.money = Math.floor(this.gameState.money)
+                        this.gameState.delivered++
                     }
                     a.reset()
-                    this.rerender()
                 }
             })
+
         }
 
-        if (this.tasks.length === 1) {
-            this.addTasks(this.gameState.stations[0], 3)
-            this.rerender()
+
+        this.pizzaDespawns = this.pizzaDespawns.filter(d => d.scaleF >= 0)
+
+        const availTasks = this.tasks.filter(t => !t.active)
+        if (this.gameState.autoTaskAssign && availTasks.length > 0) {
+            this.activateTask(availTasks[0])
         }
 
+        if (availTasks.length < 5) {
+            this.addTasks(this.gameState.stations[0], 5)
+        }
 
         updateAgents()
 
         while (this.agents.length < this.gameState.numAgents) {
             this.spawnAgent(this.gameState.stations[0], true)
         }
+        this.rerender()
     }
 
     getNewRouteFrom(sNode: Node): Node[] {
