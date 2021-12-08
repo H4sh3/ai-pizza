@@ -4,6 +4,7 @@ import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
 import { randInt } from "./math";
 import { directionOfNodes } from "./etc";
+import { Task } from "./game";
 
 export interface AgentSettings {
     velReduction: number,
@@ -27,23 +28,45 @@ export interface Sensor {
     pos: Vector
 }
 
+export class Route {
+    nodes: Node[]
+    task: Task
+    checkpoints: Line[]
+    isEnd: boolean
+
+    constructor(task: Task, nodes: Node[], checkpoints: Line[], isEnd: boolean) {
+        this.task = task
+        this.nodes = nodes
+        this.checkpoints = checkpoints
+        this.isEnd = isEnd
+    }
+
+    getEndNode() {
+        return this.nodes[this.nodes.length - 1]
+    }
+
+    getStartNode() {
+        return this.nodes[0]
+    }
+}
+
 class Agent {
     pos: Vector
     settings: AgentSettings
     spawnSettings: SpawnSettings
     size: Vector
     alive: boolean
-    isBest: boolean
     reachedCheckpoints: number
     overallCheckpoints: number
     acc: Vector
     vel: Vector
     dir: Vector
     sensors: Sensor[]
-    checkpoints: Line[]
+
+    routes: Route[]
+
     nn: NeuralNetwork
     tickSinceLastCP: number
-    route: Node[]
     lifetime: number
     color: {
         r: number,
@@ -79,13 +102,8 @@ class Agent {
             h: randInt(0, 101),
         }
         this.highlighted = false
-    }
 
-    changeRoute(route) {
-        this.route = route
-        this.spawnSettings.direction = directionOfNodes(route[0], route[1])
-        this.spawnSettings.startNode = route[0];
-        this.pos = this.spawnSettings.startNode.pos.copy()
+        this.routes = []
     }
 
     reset() {
@@ -94,7 +112,6 @@ class Agent {
         this.vel = new Vector(0, 0)
         this.dir = new Vector(this.spawnSettings.direction.x, this.spawnSettings.direction.y)
         this.alive = true
-        this.isBest = false
         this.reachedCheckpoints = 0
         this.tickSinceLastCP = 0
     }
@@ -109,7 +126,6 @@ class Agent {
                 pos: new Vector(0, - len),
             })
         }
-
     }
 
     kill() {

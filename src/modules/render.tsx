@@ -14,7 +14,7 @@ export const renderLines = (lines: Line[], context, color) => {
     })
 }
 
-export const renderNodes = (nodes: Node[], context, color: string, highlightedNode: Node) => {
+export const renderNodes = (nodes: Node[], context, color: string, highlightedNode: Node | undefined = undefined) => {
     nodes.forEach(n => {
         if (n === highlightedNode) {
             context.fillStyle = "#00FF00"

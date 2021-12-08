@@ -1,17 +1,19 @@
+import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
-import Agent, { AgentSettings, SpawnSettings } from "./agent"
+import Agent, { AgentSettings, Route, SpawnSettings } from "./agent"
 import { NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
-import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
+import generateRandomTrainingsMap, { getNodeInDirection, shuffle } from "./maps/trainingsGeneration"
 import { randInt } from "./math"
 import { PretrainedModel2 } from "./model"
 import { Line, Node, Vector } from "./models"
 
-interface Task {
+export interface Task {
     start: Node,
     end: Node,
     route: Node[],
-    active: boolean
+    active: boolean,
+    deliverd: boolean
 }
 
 export class Game {
@@ -46,13 +48,15 @@ export class Game {
 
     tasks: Task[]
 
+    rerender: () => void
+
     constructor(width, height) {
         this.neuralNet = NeuralNetwork.deserialize(PretrainedModel2)
         this.width = width
         this.height = height
         this.agentSettings = {
             steerRange: 10,
-            velReduction: 1.25,
+            velReduction: 1.35,
             sensorSettings: {
                 num: 9,
                 len: NODE_SIZE * 3,
@@ -83,7 +87,7 @@ export class Game {
     }
 
     init() {
-        this.nodes = generateRandomTrainingsMap(50)
+        this.nodes = generateRandomTrainingsMap(150)
 
         this.allRoutes = getAllRoutesDict(this.nodes)
         for (let i = 0; i < 10; i++) {
@@ -101,14 +105,15 @@ export class Game {
         const usedEndNodes = []
         while (tasks.length < num && trys <= 10) {
             const r = this.getNewRouteFrom(startNode)
+            const endNode = r[r.length - 1]
             trys += 1 // in case every route is used
-            if (usedEndNodes.includes(r[r.length - 1])) return
+            if (usedEndNodes.includes(endNode)) return
             tasks.push({
                 start: startNode,
-                end: r[r.length - 1],
+                end: endNode,
                 route: r
             })
-
+            usedEndNodes.push(endNode)
         }
 
         tasks.forEach(t => {
@@ -119,7 +124,28 @@ export class Game {
     activateTask(task: Task) {
         // task got activated! add route to agent; set task to pending
         this.tasks.find(t => t === task).active = true
-        this.agents
+        console.log(`${this.agents
+            .filter(a => a.routes.length === 0).length} without task!`)
+        const agent = this.agents
+            .filter(a => a.routes.length === 0) // has no task
+            .filter(a => a.spawnSettings.startNode === task.start)[0] // works at tasks station
+
+        const toTarget: Route = new Route(task, task.route, getCheckpoints(task.route), false)
+        agent.routes.push(toTarget)
+
+        const routeBack = search(this.nodes, task.end, agent.spawnSettings.startNode)
+        const fromTarget: Route = new Route(task, routeBack, getCheckpoints(routeBack), true)
+        agent.routes.push(fromTarget)
+
+        const dir = directionOfNodes(task.route[0], task.route[1])
+        if (agent.routes.length > 1) {
+            agent.spawnSettings.direction.x = dir.x
+            agent.spawnSettings.direction.y = dir.y
+            agent.dir.x = dir.x
+            agent.dir.y = dir.y
+        }
+
+        this.tasks.sort((a, b) => !a.active ? -1 : 0)
     }
 
     addTask(startNode: Node) {
@@ -128,7 +154,8 @@ export class Game {
             start: startNode,
             end: r[r.length - 1],
             route: r,
-            active: false
+            active: false,
+            deliverd: false,
         })
     }
 
@@ -150,6 +177,8 @@ export class Game {
         }
 
         const agent = new Agent(spawnSettings, this.agentSettings)
+
+        agent.nn = this.neuralNet.copy()
         if (mutate) agent.nn.mutate(0.1)
 
         this.agents.push(agent)
@@ -162,17 +191,44 @@ export class Game {
 
             this.agents = this.agents.filter(a => a.alive)
             this.agents = this.agents.filter(a => a.tickSinceLastCP < 100)
-
-            this.agents.filter(a => a.checkpoints.length > 0).forEach(a => {
+            this.agents.filter(a => a.routes.length > 0).forEach(a => {
                 // transform sensors to current position & direction
                 const transformedSensors = a.sensors.map(sensor => transformSensor(sensor, a))
                 this.sensorVisual = [...this.sensorVisual, ...transformedSensors]
                 const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, this.roads)
                 this.intersections = [...this.intersections, ...roadIntersections[1]]
-                const checkpointIntersections = getSensorIntersectionsWith(a, transformedSensors, [a.checkpoints[a.reachedCheckpoints % a.checkpoints.length]])
+
+                const currentCheckpoint = [a.routes[0].checkpoints[a.reachedCheckpoints % a.routes[0].checkpoints.length]]
+                const checkpointIntersections = getSensorIntersectionsWith(a, transformedSensors, currentCheckpoint)
                 const inputs = [...roadIntersections[0], ...checkpointIntersections[0]]
+
+                const finishedCurrentRoute = agentsCollisions(a, this.roads, a.routes[0].checkpoints)
+
                 a.update(inputs)
+
+                if (finishedCurrentRoute) {
+                    const finishedRoute = a.routes.shift()
+                    if (!finishedRoute.isEnd) {
+                        const newRoute = a.routes[0]
+                        const dir = directionOfNodes(newRoute.nodes[0], newRoute.nodes[1])
+                        a.spawnSettings.direction = dir
+                        a.spawnSettings.startNode = newRoute.nodes[0]
+                        finishedRoute.task.deliverd = true
+                    } else {
+                        // set home
+                        console.log(`finished ${finishedRoute.getStartNode().id} ->  ${finishedRoute.getEndNode().id}`)
+                        a.spawnSettings.startNode = finishedRoute.nodes[finishedRoute.nodes.length - 1]
+                        this.tasks = this.tasks.filter(t => t !== finishedRoute.task)
+                    }
+                    a.reset()
+                    this.rerender()
+                }
             })
+        }
+
+        if (this.tasks.length === 1) {
+            this.addTasks(this.gameState.stations[0], 3)
+            this.rerender()
         }
 
 
