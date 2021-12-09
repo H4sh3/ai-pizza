@@ -6,8 +6,12 @@ import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnim
 import Game from "../modules/game"
 
 const game = new Game(WIDTH, HEIGHT)
+const mouse = {
+    x: 0,
+    y: 0
+}
 
-
+const borderGrayAndP = "border-2 border-gray-300 p-2"
 const GameUI: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
 
@@ -27,12 +31,12 @@ const GameUI: React.FC = () => {
     const canvasRef = useRef(null)
 
     const onmousemove = (e) => {
-        game.mouse.x = e.clientX
-        game.mouse.y = e.clientY
+        mouse.x = e.clientX
+        mouse.y = e.clientY
     }
 
     const onmousedown = () => {
-        game.mouseClicked()
+        game.mouseClicked(mouse.x, mouse.y)
     }
 
 
@@ -55,28 +59,28 @@ const GameUI: React.FC = () => {
             }
             game.currTime = time
 
-            //renderLines(game.intersections, context, "#000000")
+            renderLines(game.intersections, context, "#000000", true)
             renderAgents(game.agents, context)
+
+            if (game.gameState.stations.length > 0) {
+                renderStations(game.gameState.stations, context)
+            }
             // used when the user picks first station
             if (game.gameState.pickingFirstNode) {
-                const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
+                const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
                 renderNodes(game.nodes.filter(n => n.getNeightbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
             }
 
             if (game.edgeBuild.active) {
                 if (game.edgeBuild.startNode === undefined) {
-                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
+                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
                     renderNodes(game.nodes.filter(n => n.getNeightbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
                 } else {
-                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
+                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
                     const nodesWithRightDist = game.nodes.filter(n => n.pos.dist(game.edgeBuild.startNode.pos) === NODE_SIZE * 3)
                     const notANeighbour = nodesWithRightDist.filter(n => !game.edgeBuild.startNode.getNeightbours().includes(n))
                     renderNodes(notANeighbour, context, "rgba(0,200,0,70)", highlightedNode)
                 }
-            }
-
-            if (game.gameState.stations.length > 0) {
-                renderStations(game.gameState.stations, context)
             }
 
             renderNodes(game.tasks.filter(t => !t.deliverd && t.active).map(t => t.end), context, "rgba(0,200,0,0.4)")
@@ -94,11 +98,7 @@ const GameUI: React.FC = () => {
         return () => cancelAnimationFrame(frameId)
     }, [])
 
-    const openTasks = game.tasks.filter(t => !t.active)
-    const activeTasks = game.tasks.filter(t => t.active)
-    const { prices } = game;
 
-    const borderGrayAndP = "border-2 border-gray-300 p-2"
 
     return <div className="flex flex-row border-2 border-black-500 select-none">
         <div onMouseMove={onmousemove}
@@ -109,34 +109,10 @@ const GameUI: React.FC = () => {
         </div>
         <div className="p-5 flex flex-col gap-2">
             {game.gameState.pickingFirstNode ?
-                <Task
-                    title={"1.) Pick your first station!"}
-                >
-                    <div className="">
-                        <div>
-                            As the CEO of AI-Pizza Corp your only goal is to deliver as many pizzas as possible.
-                        </div>
-                        <div>
-                            Don't worry you wont have to deliver them yourself, its the future and self driving Pizza-delivery-agents exist already.
-                        </div>
-                        <div>
-                            Start by placing your first station, this is where your agents will spawn.
-                        </div>
-                    </div>
-                </Task>
+                <IntroMessage />
                 :
                 <div className="flex flex-col gap-2">
-                    <div className={borderGrayAndP}>
-                        {`Time left: ${300 - Math.floor((game.currTime - game.startTime) / 1000)}`}
-                        <div className="flex flex-row justify-between gap-2">
-                            <div>
-                                {`Points: ${game.gameState.points}`}
-                            </div>
-                            <div>
-                                {`Money: ${game.gameState.money}$`}
-                            </div>
-                        </div>
-                    </div>
+                    <ScoreBoard game={game} />
                     <div className={borderGrayAndP}>
                         <div className="flex flex-row text-center items-center justify-around gap-2">
                             <div className="flex flex-col gap-2 items-center">
@@ -155,48 +131,31 @@ const GameUI: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <div className={borderGrayAndP}>
-                        <div className="flex flex-col gap-2">
-                            <div className="underline text-center">Shop</div>
-                            <Button
-                                disabled={game.gameState.money < prices.agent}
-                                onClick={
-                                    () => {
-                                        game.gameState.money -= prices.agent
-                                        game.gameState.numAgents++
-                                        game.rerender()
-                                    }
-                                }>
-                                {`Agent - ${prices.agent}$`}
-                            </Button>
-                            <Button
-                                disabled={game.gameState.money < prices.addEdge}
-                                onClick={
-                                    () => {
-                                        game.gameState.money -= prices.addEdge
-                                        game.edgeBuild.active = true
-                                        game.rerender()
-                                    }
-                                }>
-                                {`Add edge - ${prices.addEdge}$`}
-                            </Button>
-                        </div>
-                    </div>
+                    <Store game={game} />
                     {
-                        game.gameState.autoTaskAssign ? <></>
+                        game.gameState.running ? <></>
                             :
                             <Button
-                                disabled={game.gameState.money < prices.taskSheduler}
                                 onClick={
                                     () => {
-                                        game.gameState.money -= prices.taskSheduler
-                                        game.gameState.autoTaskAssign = true
                                         game.gameState.running = true
                                         game.rerender()
                                     }
                                 }>
                                 Start
                             </Button>
+                    }
+                    {
+                        !game.gameState.running && !game.gameState.isFirstGame ?
+                            <Button
+                                onClick={
+                                    () => {
+                                        game.init()
+                                    }
+                                }>
+                                Restart
+                            </Button> :
+                            <></>
                     }
                 </div>
             }
@@ -233,7 +192,7 @@ interface ButtonProps {
 }
 
 const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) => {
-    return <div className={`${disabled ? "cursor-not-allowed bg-gray-200 text-gray-100" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
+    return <div className={`${disabled ? "cursor-not-allowed bg-gray-200" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
         onClick={() => {
             if (disabled) return
             onClick()
@@ -257,6 +216,89 @@ const getRouteLines = (agent: Agent) => {
     })
     const arr = Object.keys(lines).map(k => { return lines[k] })
     return arr.filter(e => e.cnt === 2).map(cntObject => cntObject.e.getLine())
+}
+
+const IntroMessage: React.FC = () => {
+    return <Task
+        title={"1.) Pick your first station!"}
+    >
+        <div className="">
+            <div>
+                As the CEO of AI-Pizza Corp your only goal is to deliver as many pizzas as possible.
+            </div>
+            <div>
+                Don't worry you wont have to deliver them yourself, its the future and self driving Pizza-delivery-agents exist already.
+            </div>
+            <div className="pt-5 font-bold">
+                Start by placing your first station, this is where your agents will spawn.
+            </div>
+        </div>
+    </Task>
+}
+
+const ShopeExplanation: React.FC = () => {
+    return <Task
+        title={"1.) Buy some upgrades and start the game!"}
+    >
+        <div className="">
+            <div>
+                There are a few things you can to to maximize your score!
+            </div>
+            <div>
+                1. Buy more delivery agents.
+            </div>
+            <div>
+                2. Remove wall to reduce the agents travel time.
+            </div>
+            <div>
+                3. Enhance the agents speed.
+            </div>
+        </div>
+    </Task>
+}
+
+interface UsesGame {
+    game: Game
+}
+
+export const Store: React.FC<UsesGame> = ({ game }) => {
+    const { prices, gameState } = game;
+    return <div className={borderGrayAndP}>
+        <div className="flex flex-col gap-2">
+            <div className="underline text-center">Shop</div>
+            <div className="text-center">
+                {`Money: ${game.gameState.money}$`}
+            </div>
+            <Button
+                disabled={gameState.money < prices.agent}
+                onClick={() => { game.buyAgent() }}>
+                {`+1 Agent - ${prices.agent}$`}
+            </Button>
+            <Button
+                disabled={gameState.money < prices.addEdge}
+                onClick={() => { game.buyEdge() }}>
+                {`Remove wall - ${prices.addEdge}$`}
+            </Button>
+            <Button
+                disabled={gameState.money < prices.speed || gameState.speedLevel === 3} // max level atm
+                onClick={() => { game.buySpeed() }}>
+                {`Agent speed - ${gameState.speedLevel === 3 ? 'MAX' : `${prices.speed}$`}`}
+            </Button>
+        </div>
+    </div>
+}
+
+const ScoreBoard: React.FC<UsesGame> = ({ game }) => {
+    return <div className={`rounded-t-lg border-gray-200 border-2`}>
+        <div className="text-xl text-center bg-blue-500 text-white font-bold rounded-t-lg">
+            {`Score: ${game.gameState.points}`}
+        </div>
+        <div className="flex flex-col gap-2 items-center p-2">
+            <div>
+                {`Time left: ${300 - Math.floor((game.currTime - game.startTime) / 1000)}s`}
+            </div>
+        </div>
+    </div>
 }
 
 export default GameUI;

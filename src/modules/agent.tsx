@@ -7,7 +7,7 @@ import { directionOfNodes } from "./etc";
 import { Task } from "./game";
 
 export interface AgentSettings {
-    velReduction: number,
+    velReduction: number[],
     steerRange: number,
     sensorSettings: SensorSettings
 }
@@ -136,7 +136,7 @@ class Agent {
         return this.dir.heading()
     }
 
-    update(input) {
+    update(input, speedLevel: number) {
         this.lifetime++
         const output = this.nn.predict(input)
         const velMag = this.vel.mag()
@@ -153,7 +153,7 @@ class Agent {
 
         this.pos.add(this.vel)
 
-        this.vel.div(this.settings.velReduction)
+        this.vel.div(this.settings.velReduction[speedLevel])
     }
 }
 

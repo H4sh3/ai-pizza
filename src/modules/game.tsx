@@ -29,9 +29,9 @@ export class Game {
 
 
     prices: {
-        taskSheduler: number,
         agent: number,
-        addEdge: number
+        addEdge: number,
+        speed: number
     }
 
 
@@ -59,7 +59,9 @@ export class Game {
         stations: Node[],
         money: number,
         points: number,
-        autoTaskAssign: boolean
+        autoTaskAssign: boolean,
+        isFirstGame: boolean,
+        speedLevel: number
     }
 
     tasks: Task[]
@@ -82,9 +84,19 @@ export class Game {
         this.neuralNet = NeuralNetwork.deserialize(PretrainedModel2)
         this.width = width
         this.height = height
+        this.init()
+        this.gameState.isFirstGame = true
+    }
+
+    init() {
         this.agentSettings = {
             steerRange: 10,
-            velReduction: 1.20,
+            velReduction: [
+                2.00,
+                1.80,
+                1.50,
+                1.20
+            ],
             sensorSettings: {
                 num: 9,
                 len: NODE_SIZE * 3,
@@ -94,15 +106,9 @@ export class Game {
 
 
         this.prices = {
-            taskSheduler: 0,
             agent: 500,
-            addEdge: 100
-        }
-
-
-        this.mouse = {
-            x: 0,
-            y: 0
+            addEdge: 100,
+            speed: 100
         }
 
         this.intersections = []
@@ -118,15 +124,17 @@ export class Game {
             running: false,
             stations: [],
             pickingFirstNode: true,
-            money: 1250,
+            money: 1500,
             points: 0,
-            autoTaskAssign: false
+            autoTaskAssign: false,
+            isFirstGame: false,
+            speedLevel: 0
         }
 
         const { edges, nodes } = generateRandomTrainingsMap(150)
         this.edges = edges
         this.nodes = nodes
-        this.init()
+        this.initRoutes()
 
         // only graphical fancyness -> no functionality
         this.pizzaAnimation = []
@@ -139,10 +147,9 @@ export class Game {
 
         this.startTime = 0
         this.currTime = 0
-
     }
 
-    init() {
+    initRoutes() {
         this.allRoutes = getAllRoutesDict(this.nodes)
         for (let i = 0; i < 10; i++) {
             this.allRoutes[i].routes.forEach(r => {
@@ -265,7 +272,7 @@ export class Game {
 
                 const finishedCurrentRoute = agentsCollisions(a, this.roads, a.routes[0].checkpoints)
 
-                a.update(inputs)
+                a.update(inputs, this.gameState.speedLevel)
 
                 if (finishedCurrentRoute) {
                     const finishedRoute = a.routes.shift()
@@ -302,7 +309,7 @@ export class Game {
         this.scrollingTexts = this.scrollingTexts.filter(d => d.factor >= 0)
 
         const availTasks = this.tasks.filter(t => !t.active)
-        if (this.gameState.autoTaskAssign && availTasks.length > 0) {
+        if (availTasks.length > 0) {
             this.activateTask(availTasks[0])
         }
 
@@ -318,8 +325,8 @@ export class Game {
         this.rerender()
     }
 
-    mouseClicked() {
-        const pickedNode: Node = this.nodes.find(n => n.pos.dist(new Vector(this.mouse.x, this.mouse.y)) < nodeSelectionRange)
+    mouseClicked(mouseX: number, mouseY: number) {
+        const pickedNode: Node = this.nodes.find(n => n.pos.dist(new Vector(mouseX, mouseY)) < nodeSelectionRange)
         if (this.gameState.pickingFirstNode) {
             // user is picking first node
             if (pickedNode === undefined) return
@@ -387,12 +394,32 @@ export class Game {
     }
 
     connectNodes(node1: Node, node2: Node) {
-        console.log(node1)
         const e = addEdge(node1, node2)
-        console.log(node1)
         e.id = this.edges.length
         this.edges.push(e)
-        this.init()
+        this.initRoutes()
+    }
+
+    buyEdge() {
+        if (this.gameState.money < this.prices.addEdge) return
+        this.gameState.money -= this.prices.addEdge
+        this.edgeBuild.active = true
+        this.rerender()
+    }
+
+    buyAgent() {
+        if (this.gameState.money < this.prices.agent) return
+        this.gameState.money -= this.prices.agent
+        this.gameState.numAgents++
+        this.rerender()
+    }
+
+    buySpeed() {
+        if (this.gameState.money < this.prices.speed) return
+        if (this.gameState.speedLevel === 3) return
+        this.gameState.money -= this.prices.speed
+        this.gameState.speedLevel++
+        this.rerender()
     }
 }
 

@@ -4,14 +4,16 @@ import { NODE_SIZE } from "./const";
 import { degToRad } from "./math";
 import { Node, Line, Vector } from "./models";
 
-export const renderLines = (lines: Line[], context, color) => {
+export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
     lines.forEach((l, i) => {
         context.beginPath();
         context.moveTo(l.p1.x, l.p1.y);
         context.lineTo(l.p2.x, l.p2.y);
+        if (withArc) {
+            context.arc(l.p2.x, l.p2.y, 5, 0, 2 * Math.PI);
+        }
         context.stroke();
-        //context.fillText(i, (l.p1.x + l.p2.x) / 2, (l.p1.y + l.p2.y) / 2);
     })
 }
 
@@ -28,7 +30,6 @@ export const renderNodes = (nodes: Node[], context, color: string, highlightedNo
         context.arc(n.pos.x, n.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
         context.stroke();
         context.fill();
-        //context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
     })
 }
 
@@ -53,13 +54,13 @@ export const renderAgents = (agents: Agent[], context) => {
         const aY = a.pos.y
         context.translate(aX, aY)
         context.rotate(degToRad(a.dir.heading()))
-        //context.fillRect(- (s / 2), - (s / 2), s * 2, s)
+        context.fillRect(- (s / 2), - (s / 2), s * 2, s)
+        context.restore()
         if (a.routes[0] && !a.routes[0].isEnd) {
             var img = document.getElementById("pizza");
-            context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
-            // context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
+            //context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
+            context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
         }
-        context.restore()
 
     })
 }
