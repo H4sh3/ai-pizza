@@ -1,27 +1,12 @@
 import { useEffect, useRef, useState } from "react"
-import { HEIGHT, NODE_SIZE, WIDTH } from "../modules/const"
+import { allowedNeighbours, HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
 import { Node, Vector } from "../modules/models"
 import Agent from "../modules/agent"
 import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts } from "../modules/render"
 import Game from "../modules/game"
 
-
 const game = new Game(WIDTH, HEIGHT)
 
-const nodeSelectionRange = NODE_SIZE * 1.5;
-
-const prices = {
-    taskSheduler: 200,
-    agent: 1000,
-}
-
-const allowedNeighbours = 1
-
-export interface DespawnAnimation {
-    pos: Vector,
-    factor: number,
-    value?: number
-}
 
 const GameUI: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -47,19 +32,7 @@ const GameUI: React.FC = () => {
     }
 
     const onmousedown = () => {
-        if (!game.gameState.firstNodePicked) {
-            // user is picking first node
-            const pickedNode: Node = game.nodes.find(n => n.pos.dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
-            if (pickedNode === undefined) return
-            if (pickedNode.getNeightbours().length > allowedNeighbours) return
-
-            game.gameState.stations.push(pickedNode)
-            game.gameState.firstNodePicked = true
-            game.spawnAgent(pickedNode)
-            game.addTasks(pickedNode, 3)
-            game.gameState.running = true
-            game.rerender()
-        }
+        game.mouseClicked()
     }
 
 
@@ -77,20 +50,36 @@ const GameUI: React.FC = () => {
 
             lastTime = time
 
+            if (game.gameState.running && game.startTime === 0) {
+                game.startTime = time
+            }
+            game.currTime = time
+
+            //renderLines(game.intersections, context, "#000000")
             renderAgents(game.agents, context)
-            if (!game.gameState.firstNodePicked) {
+            // used when the user picks first station
+            if (game.gameState.pickingFirstNode) {
                 const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
                 renderNodes(game.nodes.filter(n => n.getNeightbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
+            }
+
+            if (game.edgeBuild.active) {
+                if (game.edgeBuild.startNode === undefined) {
+                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
+                    renderNodes(game.nodes.filter(n => n.getNeightbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
+                } else {
+                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(game.mouse.x, game.mouse.y)) < nodeSelectionRange)
+                    const nodesWithRightDist = game.nodes.filter(n => n.pos.dist(game.edgeBuild.startNode.pos) === NODE_SIZE * 3)
+                    const notANeighbour = nodesWithRightDist.filter(n => !game.edgeBuild.startNode.getNeightbours().includes(n))
+                    renderNodes(notANeighbour, context, "rgba(0,200,0,70)", highlightedNode)
+                }
             }
 
             if (game.gameState.stations.length > 0) {
                 renderStations(game.gameState.stations, context)
             }
 
-            if (game.tasks.length > 0) {
-                renderNodes(game.tasks.filter(t => !t.active).map(t => t.end), context, "rgba(100,100,100,0.2)")
-                renderNodes(game.tasks.filter(t => !t.deliverd && t.active).map(t => t.end), context, "rgba(0,200,0,0.4)")
-            }
+            renderNodes(game.tasks.filter(t => !t.deliverd && t.active).map(t => t.end), context, "rgba(0,200,0,0.4)")
 
             renderPizzaAnimations(game.pizzaAnimation, context)
             renderProfitTexts(game.scrollingTexts, context)
@@ -107,6 +96,7 @@ const GameUI: React.FC = () => {
 
     const openTasks = game.tasks.filter(t => !t.active)
     const activeTasks = game.tasks.filter(t => t.active)
+    const { prices } = game;
 
     const borderGrayAndP = "border-2 border-gray-300 p-2"
 
@@ -118,9 +108,26 @@ const GameUI: React.FC = () => {
             <canvas style={{ "border": "1px solid #000000" }} ref={canvasRef} {...props} />
         </div>
         <div className="p-5 flex flex-col gap-2">
-            {game.gameState.firstNodePicked ?
+            {game.gameState.pickingFirstNode ?
+                <Task
+                    title={"1.) Pick your first station!"}
+                >
+                    <div className="">
+                        <div>
+                            As the CEO of AI-Pizza Corp your only goal is to deliver as many pizzas as possible.
+                        </div>
+                        <div>
+                            Don't worry you wont have to deliver them yourself, its the future and self driving Pizza-delivery-agents exist already.
+                        </div>
+                        <div>
+                            Start by placing your first station, this is where your agents will spawn.
+                        </div>
+                    </div>
+                </Task>
+                :
                 <div className="flex flex-col gap-2">
                     <div className={borderGrayAndP}>
+                        {`Time left: ${300 - Math.floor((game.currTime - game.startTime) / 1000)}`}
                         <div className="flex flex-row justify-between gap-2">
                             <div>
                                 {`Points: ${game.gameState.points}`}
@@ -151,83 +158,47 @@ const GameUI: React.FC = () => {
                     <div className={borderGrayAndP}>
                         <div className="flex flex-col gap-2">
                             <div className="underline text-center">Shop</div>
-                            {
-                                game.gameState.autoTaskAssign ? <></>
-                                    :
-                                    <Button
-                                        disabled={game.gameState.money < prices.taskSheduler}
-                                        onClick={
-                                            () => {
-                                                game.gameState.money -= prices.taskSheduler
-                                                game.gameState.autoTaskAssign = true
-                                            }
-                                        }>{`Task sheduler - ${prices.taskSheduler}$`}</Button>
-                            }
                             <Button
                                 disabled={game.gameState.money < prices.agent}
                                 onClick={
                                     () => {
                                         game.gameState.money -= prices.agent
-                                        game.spawnAgent(game.gameState.stations[0])
+                                        game.gameState.numAgents++
+                                        game.rerender()
                                     }
-                                }>{`Agent - ${prices.agent}$`}</Button>
+                                }>
+                                {`Agent - ${prices.agent}$`}
+                            </Button>
+                            <Button
+                                disabled={game.gameState.money < prices.addEdge}
+                                onClick={
+                                    () => {
+                                        game.gameState.money -= prices.addEdge
+                                        game.edgeBuild.active = true
+                                        game.rerender()
+                                    }
+                                }>
+                                {`Add edge - ${prices.addEdge}$`}
+                            </Button>
                         </div>
                     </div>
-                    <div className="h-full">
-                        <div className="flex flex-row gap-2">
-                            <TaskCol>
-                                <div className="underline">
-                                    Open tasks
-                                </div>
-                                {
-                                    openTasks.map((t, i) => {
-                                        const disabled = game.agents.filter(a => a.routes.length === 0).length === 0
-                                        return <div className={`${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white cursor-pointer'} text-center px-2 py-1 border-2 ${t.active ? "border-green-300" : "border-gray-100"} rounded-lg`}
-                                            onClick={() => {
-                                                if (disabled) return
-                                                game.activateTask(t)
-                                                RERENDER()
-                                            }}
-                                            key={i}>
-                                            {`Delivery to Nr. ${t.end.id}`}
-                                        </div>
-                                    })
-                                }
-                            </TaskCol>
-                            <TaskCol>
-                                <div className="underline">
-                                    Active tasks
-                                </div>
-                                {
-                                    activeTasks.map((t, i) => {
-                                        return <div className={`bg-white cursor-default text-center px-2 py-1 border-2 ${t.active ? "border-green-300" : "border-gray-100"} rounded-lg`}
-                                            key={i}>
-                                            {`Delivering to Nr. ${t.end.id}`}
-                                        </div>
-                                    })
-                                }
-                            </TaskCol>
-                        </div>
-                    </div>
-
+                    {
+                        game.gameState.autoTaskAssign ? <></>
+                            :
+                            <Button
+                                disabled={game.gameState.money < prices.taskSheduler}
+                                onClick={
+                                    () => {
+                                        game.gameState.money -= prices.taskSheduler
+                                        game.gameState.autoTaskAssign = true
+                                        game.gameState.running = true
+                                        game.rerender()
+                                    }
+                                }>
+                                Start
+                            </Button>
+                    }
                 </div>
-                :
-                <Task
-                    title={"1.) Pick your first station!"}
-                >
-                    <div className="">
-                        <div>
-                            As the CEO of AI-Pizza Corp your only goal is to deliver as many pizzas as possible.
-                        </div>
-                        <div>
-                            Don't worry you wont have to deliver them yourself, its the future and self driving Pizza-delivery-agents exist already.
-                        </div>
-                        <div>
-                            Start by placing your first station, this is where your agents will spawn.
-                        </div>
-                    </div>
-                </Task>
-
             }
         </div>
     </div >
@@ -262,7 +233,7 @@ interface ButtonProps {
 }
 
 const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) => {
-    return <div className={`${disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
+    return <div className={`${disabled ? "cursor-not-allowed bg-gray-200 text-gray-100" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
         onClick={() => {
             if (disabled) return
             onClick()

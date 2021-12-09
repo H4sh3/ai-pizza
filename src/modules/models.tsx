@@ -7,6 +7,12 @@ export interface Position {
     y: number
 }
 
+export interface DespawnAnimation {
+    pos: Vector,
+    factor: number,
+    value?: number
+}
+
 export interface SegmentJson {
     id: number,
     start: Position,

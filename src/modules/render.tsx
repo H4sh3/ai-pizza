@@ -1,4 +1,4 @@
-import { DespawnAnimation } from "../components/GameUI";
+import { DespawnAnimation } from "./models";
 import Agent from "./agent";
 import { NODE_SIZE } from "./const";
 import { degToRad } from "./math";
@@ -19,10 +19,16 @@ export const renderNodes = (nodes: Node[], context, color: string, highlightedNo
     nodes.forEach(n => {
         if (n === highlightedNode) {
             context.fillStyle = "#00FF00"
+            context.strokeStyle = "#00FF00"
         } else {
             context.fillStyle = color
+            context.strokeStyle = color
         }
-        context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
+        context.beginPath();
+        context.arc(n.pos.x, n.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
+        context.stroke();
+        context.fill();
+        //context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
     })
 }
 
@@ -47,14 +53,14 @@ export const renderAgents = (agents: Agent[], context) => {
         const aY = a.pos.y
         context.translate(aX, aY)
         context.rotate(degToRad(a.dir.heading()))
-        context.fillRect(- (s / 2), - (s / 2), s * 2, s)
-        context.restore()
-
+        //context.fillRect(- (s / 2), - (s / 2), s * 2, s)
         if (a.routes[0] && !a.routes[0].isEnd) {
             var img = document.getElementById("pizza");
-            context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
+            context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
+            // context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
         }
-        //context.fillText(n.id, n.pos.x, n.pos.y);
+        context.restore()
+
     })
 }
 
@@ -70,7 +76,7 @@ export const renderPizzaAnimations = (despawns: DespawnAnimation[], context) => 
 export const renderProfitTexts = (despawns: DespawnAnimation[], context) => {
     despawns.forEach(d => {
         context.fillStyle = "#00EE00"
-        context.font = "18px Arial";
+        context.font = "22px Comic Bold";
         context.fillText(`${d.value}$`, d.pos.x, d.pos.y);
         d.pos.y -= 1
         d.factor -= 0.02
@@ -87,10 +93,7 @@ export const renderCrashed = (crashed: Agent[], context) => {
         context.translate(aX, aY)
         context.rotate(degToRad(a.dir.heading()))
         context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
-        context.fillStyle = "#000000"
-        context.font = "30px Arial";
         context.restore()
-        //context.fillText(n.id, n.pos.x, n.pos.y);
     })
 }
 
@@ -99,7 +102,5 @@ export const renderIntersections = (intersections: Vector[], context) => {
     intersections.forEach(i => {
         context.fillStyle = "#FF0000"
         context.fillRect(i.x, i.y, 5, 5)
-        context.fillStyle = "#000000"
-        context.font = "30px Arial";
     })
 }

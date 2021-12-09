@@ -1,20 +1,21 @@
-import { DespawnAnimation } from "../components/GameUI"
+import { DespawnAnimation } from "./models"
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, Route, SpawnSettings } from "./agent"
-import { NODE_SIZE } from "./const"
+import { allowedNeighbours, nodeSelectionRange, NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
-import generateRandomTrainingsMap, { getNodeInDirection, shuffle } from "./maps/trainingsGeneration"
+import { addEdge } from "./maps/trainingsEnv"
+import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
 import { randInt } from "./math"
 import { PretrainedModel2 } from "./model"
-import { Line, Node, Vector } from "./models"
+import { Edge, Line, Node, Vector } from "./models"
 
 export interface Task {
     start: Node,
     end: Node,
     route: Node[],
     active: boolean,
-    deliverd: boolean
+    deliverd: boolean,
 }
 
 export class Game {
@@ -26,14 +27,24 @@ export class Game {
         y: number
     }
 
-    neuralNet: NeuralNetwork
+
+    prices: {
+        taskSheduler: number,
+        agent: number,
+        addEdge: number
+    }
+
 
     nodes: Node[]
+    edges: Edge[]
+
+    neuralNet: NeuralNetwork
     agents: Agent[]
+
     roads: Line[]
 
     // vis stuff
-    intersections: Vector[]
+    intersections: Line[]
     sensorVisual: Line[]
     agentSettings: AgentSettings
 
@@ -41,11 +52,11 @@ export class Game {
     selectedRoutes: Node[][]
 
     gameState: {
+        pickingFirstNode: boolean,
         numAgents: number,
         delivered: number,
         running: boolean,
         stations: Node[],
-        firstNodePicked: boolean,
         money: number,
         points: number,
         autoTaskAssign: boolean
@@ -53,9 +64,17 @@ export class Game {
 
     tasks: Task[]
 
+    // adding edges
+    edgeBuild: {
+        active: boolean,
+        startNode: Node | undefined
+    }
+
     pizzaAnimation: DespawnAnimation[]
     scrollingTexts: DespawnAnimation[]
 
+    startTime: number
+    currTime: number
 
     rerender: () => void
 
@@ -65,13 +84,21 @@ export class Game {
         this.height = height
         this.agentSettings = {
             steerRange: 10,
-            velReduction: 1.35,
+            velReduction: 1.20,
             sensorSettings: {
                 num: 9,
                 len: NODE_SIZE * 3,
                 fov: 250
             }
         }
+
+
+        this.prices = {
+            taskSheduler: 0,
+            agent: 500,
+            addEdge: 100
+        }
+
 
         this.mouse = {
             x: 0,
@@ -90,22 +117,32 @@ export class Game {
             delivered: 0,
             running: false,
             stations: [],
-            firstNodePicked: false,
+            pickingFirstNode: true,
             money: 1250,
             points: 0,
             autoTaskAssign: false
         }
 
+        const { edges, nodes } = generateRandomTrainingsMap(150)
+        this.edges = edges
+        this.nodes = nodes
         this.init()
 
         // only graphical fancyness -> no functionality
         this.pizzaAnimation = []
         this.scrollingTexts = []
+
+        this.edgeBuild = {
+            active: false,
+            startNode: undefined
+        }
+
+        this.startTime = 0
+        this.currTime = 0
+
     }
 
     init() {
-        this.nodes = generateRandomTrainingsMap(150)
-
         this.allRoutes = getAllRoutesDict(this.nodes)
         for (let i = 0; i < 10; i++) {
             this.allRoutes[i].routes.forEach(r => {
@@ -208,6 +245,11 @@ export class Game {
             this.intersections = []
             this.sensorVisual = []
 
+            this.agents.filter(a => !a.alive && a.routes.length > 0).forEach(a => {
+                a.routes.forEach(r => {
+                    r.task.active = false
+                })
+            })
             this.agents = this.agents.filter(a => a.alive)
             this.agents = this.agents.filter(a => a.tickSinceLastCP < 100)
             this.agents.filter(a => a.routes.length > 0).forEach(a => {
@@ -251,6 +293,10 @@ export class Game {
 
         }
 
+        if (300 - (Math.floor(this.currTime - this.startTime) / 1000) < 0) {
+            // stop the game after 300 seconds
+            this.gameState.running = false
+        }
 
         this.pizzaAnimation = this.pizzaAnimation.filter(d => d.factor >= 0)
         this.scrollingTexts = this.scrollingTexts.filter(d => d.factor >= 0)
@@ -270,6 +316,35 @@ export class Game {
             this.spawnAgent(this.gameState.stations[0], true)
         }
         this.rerender()
+    }
+
+    mouseClicked() {
+        const pickedNode: Node = this.nodes.find(n => n.pos.dist(new Vector(this.mouse.x, this.mouse.y)) < nodeSelectionRange)
+        if (this.gameState.pickingFirstNode) {
+            // user is picking first node
+            if (pickedNode === undefined) return
+            if (pickedNode.getNeightbours().length > allowedNeighbours) return
+
+            this.gameState.stations.push(pickedNode)
+            this.gameState.pickingFirstNode = false
+            this.spawnAgent(pickedNode)
+            this.addTasks(pickedNode, 3)
+            this.rerender()
+        } else if (this.edgeBuild.active) {
+            if (pickedNode === undefined) return
+            if (pickedNode.getNeightbours().length > 3) return
+
+            // first node selection
+            if (this.edgeBuild.startNode === undefined) {
+                this.edgeBuild.startNode = pickedNode
+            } else {
+                // second node -> add edge
+                this.connectNodes(this.edgeBuild.startNode, pickedNode)
+                this.edgeBuild.startNode = undefined
+                this.edgeBuild.active = false
+            }
+        }
+
     }
 
     getNewRouteFrom(sNode: Node): Node[] {
@@ -302,13 +377,22 @@ export class Game {
     }
 
     handleMoney(nodeLength: number) {
-        const profit = nodeLength * 4
+        const profit = 10 + Math.floor(nodeLength / 2)
         this.gameState.points += profit
         this.gameState.money += profit
         this.gameState.points = Math.floor(this.gameState.points)
         this.gameState.money = Math.floor(this.gameState.money)
         this.gameState.delivered++
         return profit
+    }
+
+    connectNodes(node1: Node, node2: Node) {
+        console.log(node1)
+        const e = addEdge(node1, node2)
+        console.log(node1)
+        e.id = this.edges.length
+        this.edges.push(e)
+        this.init()
     }
 }
 

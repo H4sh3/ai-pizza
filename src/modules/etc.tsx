@@ -57,7 +57,7 @@ export function getSensorIntersectionsWith(agent: Agent, transformedSensors: Lin
         })
 
         if (isVector(closestIntersectionPoint)) {
-            intersectionPoints.push(closestIntersectionPoint)
+            intersectionPoints.push(new Line(agent.pos.x, agent.pos.y, closestIntersectionPoint.x, closestIntersectionPoint.y))
             inputs.push(map(closestIntersectionPoint.dist(agent.pos), 0, agent.settings.sensorSettings.len, 0, 1))
         } else {
             inputs.push(1)

@@ -105,7 +105,7 @@ export const generateRandomTrainingsMap = (n: number) => {
 
     edges.map((e, i) => e.id = i)
 
-    return nodes
+    return { nodes, edges }
 }
 
 export const generateNextNode = (startNode: Node, edges: Edge[]): Node | undefined => {
