@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { allowedNeighbours, HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
+import { allowedNeighbours, GAME_DURATION, HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
 import { Node, Vector } from "../modules/models"
 import Agent from "../modules/agent"
 import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts } from "../modules/render"
@@ -118,22 +118,26 @@ const GameUI: React.FC = () => {
                     {
                         game.gameState.running ? <></>
                             :
-                            <Button
-                                onClick={
-                                    () => {
-                                        game.gameState.running = true
-                                        game.rerender()
-                                    }
-                                }>
-                                Start
-                            </Button>
+                            game.gameState.delivered === 0 ?
+                                <Button
+                                    onClick={
+                                        () => {
+                                            game.gameState.running = true
+                                            game.rerender()
+                                        }
+                                    }>
+                                    Start
+                                </Button>
+                                :
+                                <></>
                     }
                     {
-                        !game.gameState.running && !game.gameState.isFirstGame ?
+                        !game.gameState.running && game.gameState.delivered > 0 ?
                             <Button
                                 onClick={
                                     () => {
                                         game.init()
+                                        game.rerender()
                                     }
                                 }>
                                 Restart
@@ -300,7 +304,7 @@ const ScoreBoard: React.FC<UsesGame> = ({ game }) => {
         </div>
         <div className="flex flex-col gap-2 items-center p-2">
             <div>
-                {`Time left: ${300 - Math.floor((game.currTime - game.startTime) / 1000)}s`}
+                {`Time left: ${GAME_DURATION - Math.floor((game.currTime - game.startTime) / 1000)}s`}
             </div>
         </div>
     </div>

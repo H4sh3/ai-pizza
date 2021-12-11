@@ -7,3 +7,4 @@ export const HEIGHT = 740
 
 export const allowedNeighbours = 4
 export const nodeSelectionRange = NODE_SIZE * 2;
+export const GAME_DURATION = 5

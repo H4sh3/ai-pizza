@@ -2,7 +2,7 @@ import { DespawnAnimation } from "./models"
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
-import { allowedNeighbours, nodeSelectionRange, NODE_SIZE } from "./const"
+import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
 import { addEdge } from "./maps/trainingsEnv"
 import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
@@ -45,22 +45,23 @@ export class Game {
     selectedRoutes: Node[][]
 
     gameState: {
-        pickingFirstNode: boolean,
-        numAgents: number,
-        delivered: number,
-        running: boolean,
-        stations: Node[],
-        money: number,
-        points: number,
-        autoTaskAssign: boolean,
-        isFirstGame: boolean,
-        speedLevel: number,
+        pickingFirstNode: boolean
+        numAgents: number
+        delivered: number
+        running: boolean
+        stations: Node[]
+        money: number
+        points: number
+        autoTaskAssign: boolean
+        speedLevel: number
         autoBuyAgents: boolean
+        iteration: number
+        scores: number[]
     }
 
     // adding edges
     edgeBuild: {
-        active: boolean,
+        active: boolean
         startNode: Node | undefined
     }
 
@@ -70,6 +71,8 @@ export class Game {
     startTime: number
     currTime: number
 
+    scores: number[][]
+
     rerender: () => void
 
     constructor(width, height) {
@@ -77,7 +80,7 @@ export class Game {
         this.width = width
         this.height = height
         this.init()
-        this.gameState.isFirstGame = true
+        this.scores = []
     }
 
     init() {
@@ -118,9 +121,10 @@ export class Game {
             money: 1500,
             points: 0,
             autoTaskAssign: false,
-            isFirstGame: false,
             speedLevel: 0,
             autoBuyAgents: false,
+            iteration: 0,
+            scores: []
         }
 
 
@@ -243,7 +247,7 @@ export class Game {
 
         }
 
-        if (300 - (Math.floor(this.currTime - this.startTime) / 1000) < 0) {
+        if (GAME_DURATION - (Math.floor(this.currTime - this.startTime) / 1000) < 0) {
             // stop the game after 300 seconds
             this.gameState.running = false
         }
