@@ -9,6 +9,7 @@ import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
 import { randInt } from "./math"
 import { PretrainedModel2 } from "./model"
 import { Edge, Line, Node, Vector } from "./models"
+import deser from "./maps/scquareCity"
 
 export interface Task {
     start: Node,
@@ -131,7 +132,8 @@ export class Game {
             speedLevel: 0
         }
 
-        const { edges, nodes } = generateRandomTrainingsMap(150)
+        const { edges, nodes } = deser
+
         this.edges = edges
         this.nodes = nodes
         this.initRoutes()

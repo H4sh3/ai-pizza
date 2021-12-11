@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react"
-import { allowedNeighbours, HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
+import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
 import { Edge, Node, Vector } from "../modules/models"
+import { renderLines, renderNodes } from "../modules/render"
+import { addEdge } from "../modules/maps/trainingsEnv"
 import Agent from "../modules/agent"
-import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts } from "../modules/render"
-import Game from "../modules/game"
 
 const state = {
     nodes: [] as Node[],
@@ -13,7 +13,51 @@ const state = {
         x: 0,
         y: 0,
     },
-    res: NODE_SIZE
+    res: NODE_SIZE,
+    selectedNode: undefined,
+    grid: []
+}
+
+export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] } => {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+
+    // 1. create nodes with id and pos
+    nodesSer.forEach(n => {
+        nodes.push(new Node(n.id, n.x, n.y))
+    })
+
+    // 2. create edges with nodes
+    edgesSer.forEach(eSer => {
+        const n1 = nodes.find(n => n.id === eSer.start)
+        const n2 = nodes.find(n => n.id === eSer.end)
+        const e = new Edge(n1, n2, eSer.id)
+        edges.push(e)
+    })
+
+    // 3. iterate over nodes and set edges on connections
+    nodesSer.forEach(n => {
+        const node = nodes.find(nx => nx.id === n.id)
+        Object.keys(n.connections).forEach(dir => {
+            if (n.connections[dir] === -1) {
+
+            } else {
+                const e = edges.find(e => e.id === n.connections[dir])
+                node.connections[dir] = e
+            }
+        })
+    })
+    return { nodes, edges }
+}
+
+const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
+const dotsY = Math.floor(HEIGHT / (NODE_SIZE * 2))
+console.log(dotsX)
+console.log(dotsY)
+for (let x = 1; x < dotsX; x++) {
+    for (let y = 1; y < dotsY; y++) {
+        state.grid.push({ x: x * (WIDTH / dotsX), y: y * (HEIGHT / dotsY) })
+    }
 }
 
 const borderGrayAndP = "border-2 border-gray-300 p-2"
@@ -32,12 +76,24 @@ const MapEditor: React.FC = () => {
     const canvasRef = useRef(null)
 
     const onmousemove = (e) => {
-        state.gridCursor.x = Math.round((e.clientX - 15) / state.res) * state.res
-        state.gridCursor.y = Math.round((e.clientY - 15) / state.res) * state.res
+        state.gridCursor.x = Math.round(e.clientX / (WIDTH / dotsX)) * (WIDTH / dotsX)
+        state.gridCursor.y = Math.round(e.clientY / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
     }
 
     const onmousedown = () => {
-        // game.mouseClicked(mouse.x, mouse.y)
+        if (state.nodeMode) {
+            state.nodes.push(new Node(state.nodes.length, state.gridCursor.x, state.gridCursor.y))
+        } else {
+            const node = getNodeAtCursor()
+            if (state.selectedNode === undefined) {
+                state.selectedNode = node
+            } else {
+                const e = addEdge(state.selectedNode, node)
+                state.edges.push(e)
+                state.edges.map((e, i) => e.id = i)
+                state.selectedNode = undefined
+            }
+        }
     }
 
 
@@ -49,7 +105,7 @@ const MapEditor: React.FC = () => {
         const frame = time => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
-            if (timeDelta < 1000 / 60) return
+            if (timeDelta < 1000 / 30) return
             context.fillStyle = "rgba(160, 160, 160,10)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
@@ -60,8 +116,13 @@ const MapEditor: React.FC = () => {
             context.arc(state.gridCursor.x, state.gridCursor.y, 5, 0, 2 * Math.PI);
             context.stroke();
             context.fill();
+            context.closePath()
 
-            renderNodes(state.nodes, context, "rgba(0,200,0,0.4)")
+            drawGrid(context)
+
+            const highlightedNode: Node = getNodeAtCursor()
+            renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
+
             const usedIds = []
             const lines = state.nodes.reduce((acc, n) => { return [...acc, ...n.getLines(usedIds)] }, [])
             renderLines(lines, context, "#000000")
@@ -73,47 +134,92 @@ const MapEditor: React.FC = () => {
 
 
 
-    return <div className="flex flex-row border-2 border-black-500 select-none">
+    return <div className="flex flex-row gap-2 select-none p-2">
         <div onMouseMove={onmousemove}
             onMouseDown={onmousedown}
-            className="p-2"
         >
-            <canvas style={{ "border": "1px solid #000000" }} ref={canvasRef} {...props} />
+            <canvas ref={canvasRef} {...props} />
         </div>
-        <Button
-            onClick={
-                () => {
-                    state.nodeMode = !state.nodeMode
-                    RERENDER()
-                }
-            }>
-            {state.nodeMode ? "Node mode on" : "Edge mode on"}
-        </Button>
+        <div className="flex flex-col items-center gap-2">
+            <Button
+                onClick={
+                    () => {
+                        state.nodeMode = !state.nodeMode
+                        RERENDER()
+                    }
+                }>
+                {state.nodeMode ? "Node mode on" : "Edge mode on"}
+            </Button>
+            <Button
+                onClick={
+                    () => {
+                        state.nodes.pop()
+                        RERENDER()
+                    }
+                }>
+                Delete last node
+            </Button>
+            <Button
+                onClick={
+                    () => {
+                        serialize()
+                    }
+                }>
+                Serialize!
+            </Button>
+
+        </div>
     </div >
 }
 
+const getEdgeIds = (node: Node) => {
+    const left = node.connections.left === undefined ? -1 : node.connections.left.id
+    const right = node.connections.right === undefined ? -1 : node.connections.right.id
+    const top = node.connections.top === undefined ? -1 : node.connections.top.id
+    const bottom = node.connections.bottom === undefined ? -1 : node.connections.bottom.id
 
-
-const TaskCol: React.FC = ({ children }) => {
-    return <div className="flex flex-col gap-2 p-2 border-2 border-gray-300">
-        {children}
-    </div>
+    return `{
+        "left":${left},
+        "right":${right},
+        "top":${top},
+        "bottom":${bottom},
+    }`
 }
 
-interface TaskProps {
-    title: string
+const serialize = () => {
+    let s = "[\n"
+    state.nodes.forEach(n => {
+        s += `{"id":${n.id} , "x":${n.pos.x} , "y":${n.pos.y}, "connections":${getEdgeIds(n)}},`
+    })
+    s += `\n]`
+    console.log(s)
+    let e = "[\n"
+    state.edges.forEach(n => {
+        e += `{"id":${n.id} , "start":${n.startNode.id} , "end":${n.endNode.id} },`
+    })
+    e += `\n]`
+    console.log(e)
 }
 
-const Task: React.FC<TaskProps> = ({ title, children }) => {
-    return <div className="flex flex-col p-2 bg-gray-300 border-green-500 border-2 rounded-xl gap-2">
-        <div className="text-center font-bold text-xl text-gray-700">
-            {title}
-        </div>
-        <div className="p-2 bg-white rounded-xl">
-            {children}
-        </div>
-    </div>
+
+const getNodeAtCursor = () => {
+    return state.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(state.gridCursor.x, state.gridCursor.y)) < nodeSelectionRange)
 }
+
+const drawGrid = (context) => {
+    state.grid.forEach(point => {
+        context.beginPath()
+        context.strokeStyle = "#000000"
+        context.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+        context.stroke();
+        context.fill();
+        context.closePath()
+    })
+}
+
+
+
+
 
 interface ButtonProps {
     onClick: () => void
@@ -145,89 +251,6 @@ const getRouteLines = (agent: Agent) => {
     })
     const arr = Object.keys(lines).map(k => { return lines[k] })
     return arr.filter(e => e.cnt === 2).map(cntObject => cntObject.e.getLine())
-}
-
-const IntroMessage: React.FC = () => {
-    return <Task
-        title={"1.) Pick your first station!"}
-    >
-        <div className="">
-            <div>
-                As the CEO of AI-Pizza Corp your only goal is to deliver as many pizzas as possible.
-            </div>
-            <div>
-                Don't worry you wont have to deliver them yourself, its the future and self driving Pizza-delivery-agents exist already.
-            </div>
-            <div className="pt-5 font-bold">
-                Start by placing your first station, this is where your agents will spawn.
-            </div>
-        </div>
-    </Task>
-}
-
-const ShopeExplanation: React.FC = () => {
-    return <Task
-        title={"1.) Buy some upgrades and start the game!"}
-    >
-        <div className="">
-            <div>
-                There are a few things you can to to maximize your score!
-            </div>
-            <div>
-                1. Buy more delivery agents.
-            </div>
-            <div>
-                2. Remove wall to reduce the agents travel time.
-            </div>
-            <div>
-                3. Enhance the agents speed.
-            </div>
-        </div>
-    </Task>
-}
-
-interface UsesGame {
-    game: Game
-}
-
-export const Store: React.FC<UsesGame> = ({ game }) => {
-    const { prices, gameState } = game;
-    return <div className={borderGrayAndP}>
-        <div className="flex flex-col gap-2">
-            <div className="underline text-center">Shop</div>
-            <div className="text-center">
-                {`Money: ${game.gameState.money}$`}
-            </div>
-            <Button
-                disabled={gameState.money < prices.agent}
-                onClick={() => { game.buyAgent() }}>
-                {`+1 Agent - ${prices.agent}$`}
-            </Button>
-            <Button
-                disabled={gameState.money < prices.addEdge}
-                onClick={() => { game.buyEdge() }}>
-                {`Remove wall - ${prices.addEdge}$`}
-            </Button>
-            <Button
-                disabled={gameState.money < prices.speed || gameState.speedLevel === 3} // max level atm
-                onClick={() => { game.buySpeed() }}>
-                {`Agent speed - ${gameState.speedLevel === 3 ? 'MAX' : `${prices.speed}$`}`}
-            </Button>
-        </div>
-    </div>
-}
-
-const ScoreBoard: React.FC<UsesGame> = ({ game }) => {
-    return <div className={`rounded-t-lg border-gray-200 border-2`}>
-        <div className="text-xl text-center bg-blue-500 text-white font-bold rounded-t-lg">
-            {`Score: ${game.gameState.points}`}
-        </div>
-        <div className="flex flex-col gap-2 items-center p-2">
-            <div>
-                {`Time left: ${300 - Math.floor((game.currTime - game.startTime) / 1000)}s`}
-            </div>
-        </div>
-    </div>
 }
 
 export default MapEditor;

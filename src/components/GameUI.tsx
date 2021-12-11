@@ -11,7 +11,7 @@ const mouse = {
     y: 0
 }
 
-const borderGrayAndP = "border-2 border-gray-300 p-2"
+const borderGrayAndP = "border-2 border-gray-300"
 const GameUI: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
 
@@ -100,7 +100,7 @@ const GameUI: React.FC = () => {
 
 
 
-    return <div className="flex flex-row border-2 border-black-500 select-none">
+    return <div className="flex flex-row border-2 shadow select-none">
         <div onMouseMove={onmousemove}
             onMouseDown={onmousedown}
             className="p-2"
@@ -113,25 +113,8 @@ const GameUI: React.FC = () => {
                 :
                 <div className="flex flex-col gap-2">
                     <ScoreBoard game={game} />
-                    <div className={borderGrayAndP}>
-                        <div className="flex flex-row text-center items-center justify-around gap-2">
-                            <div className="flex flex-col gap-2 items-center">
-                                <img className="w-12 h-12" id="pizza" src="pizza.png" />
-                                <div>
-                                    {game.gameState.delivered}
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2 items-center">
-                                <div>
-                                    Agents:
-                                </div>
-                                <div>
-                                    {game.agents.length}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <Store game={game} />
+                    <AgentsStats game={game} />
                     {
                         game.gameState.running ? <></>
                             :
@@ -263,39 +246,71 @@ interface UsesGame {
 
 export const Store: React.FC<UsesGame> = ({ game }) => {
     const { prices, gameState } = game;
-    return <div className={borderGrayAndP}>
+    return <div className={`shadow rounded-lg bg-gray-100`}>
         <div className="flex flex-col gap-2">
-            <div className="underline text-center">Shop</div>
-            <div className="text-center">
-                {`Money: ${game.gameState.money}$`}
+            <div className="text-xl rounded-t-lg font-bold text-center bg-orange-500 text-white py-1">
+                Shop
             </div>
-            <Button
-                disabled={gameState.money < prices.agent}
-                onClick={() => { game.buyAgent() }}>
-                {`+1 Agent - ${prices.agent}$`}
-            </Button>
-            <Button
-                disabled={gameState.money < prices.addEdge}
-                onClick={() => { game.buyEdge() }}>
-                {`Remove wall - ${prices.addEdge}$`}
-            </Button>
-            <Button
-                disabled={gameState.money < prices.speed || gameState.speedLevel === 3} // max level atm
-                onClick={() => { game.buySpeed() }}>
-                {`Agent speed - ${gameState.speedLevel === 3 ? 'MAX' : `${prices.speed}$`}`}
-            </Button>
+            <div className="text-xl bg-white py-1">
+                <div className="text-center">
+                    {`Budget: ${game.gameState.money}$`}
+                </div>
+            </div>
+            <div className="flex flex-col gap-2 p-2">
+                <Button
+                    disabled={gameState.money < prices.agent}
+                    onClick={() => { game.buyAgent() }}>
+                    {`+1 Agent - ${prices.agent}$`}
+                </Button>
+                <Button
+                    disabled={gameState.money < prices.addEdge}
+                    onClick={() => { game.buyEdge() }}>
+                    {`Remove wall - ${prices.addEdge}$`}
+                </Button>
+                <Button
+                    disabled={gameState.money < prices.speed || gameState.speedLevel === 3} // max level atm
+                    onClick={() => { game.buySpeed() }}>
+                    {`Agent speed - ${gameState.speedLevel === 3 ? 'MAX' : `${prices.speed}$`}`}
+                </Button>
+            </div>
         </div>
     </div>
 }
 
 const ScoreBoard: React.FC<UsesGame> = ({ game }) => {
-    return <div className={`rounded-t-lg border-gray-200 border-2`}>
+    return <div className={`shadow rounded-lg bg-gray-100`}>
         <div className="text-xl text-center bg-blue-500 text-white font-bold rounded-t-lg">
-            {`Score: ${game.gameState.points}`}
+            <div className="flex flex-col items-center">
+                <div>
+                    Delivered
+                </div>
+            </div>
+        </div>
+        <div className="flex flex-col items-center border-b border-gray-500">
+            <img className="w-12 h-12" id="pizza" src="pizza.png" />
+            <div>
+                {game.gameState.delivered}
+            </div>
         </div>
         <div className="flex flex-col gap-2 items-center p-2">
             <div>
                 {`Time left: ${300 - Math.floor((game.currTime - game.startTime) / 1000)}s`}
+            </div>
+        </div>
+    </div>
+}
+
+
+const AgentsStats: React.FC<UsesGame> = ({ game }) => {
+    return <div className={borderGrayAndP}>
+        <div className="flex flex-row text-center items-center justify-around gap-2">
+            <div className="flex flex-col gap-2 items-center">
+                <div>
+                    Agents:
+                </div>
+                <div>
+                    {game.agents.length}
+                </div>
             </div>
         </div>
     </div>
