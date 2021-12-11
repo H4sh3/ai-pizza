@@ -3,8 +3,6 @@ import { Line, Vector } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
 import { randInt } from "./math";
-import { directionOfNodes } from "./etc";
-import { Task } from "./game";
 
 export interface AgentSettings {
     velReduction: number[],
@@ -28,26 +26,10 @@ export interface Sensor {
     pos: Vector
 }
 
-export class Route {
-    nodes: Node[]
-    task: Task
-    checkpoints: Line[]
-    isEnd: boolean
-
-    constructor(task: Task, nodes: Node[], checkpoints: Line[], isEnd: boolean) {
-        this.task = task
-        this.nodes = nodes
-        this.checkpoints = checkpoints
-        this.isEnd = isEnd
-    }
-
-    getEndNode() {
-        return this.nodes[this.nodes.length - 1]
-    }
-
-    getStartNode() {
-        return this.nodes[0]
-    }
+export interface Task {
+    start: Node,
+    target: Node,
+    delivered: boolean,
 }
 
 class Agent {
@@ -63,7 +45,8 @@ class Agent {
     dir: Vector
     sensors: Sensor[]
 
-    routes: Route[]
+    task: Task | undefined
+    route: Line[]
 
     nn: NeuralNetwork
     tickSinceLastCP: number
@@ -103,7 +86,8 @@ class Agent {
         }
         this.highlighted = false
 
-        this.routes = []
+        this.route = []
+        this.task = undefined
     }
 
     reset() {

@@ -1,7 +1,7 @@
 import { DespawnAnimation } from "./models"
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
-import Agent, { AgentSettings, Route, SpawnSettings } from "./agent"
+import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
 import { allowedNeighbours, nodeSelectionRange, NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
 import { addEdge } from "./maps/trainingsEnv"
@@ -10,14 +10,6 @@ import { randInt } from "./math"
 import { PretrainedModel2 } from "./model"
 import { Edge, Line, Node, Vector } from "./models"
 import deser from "./maps/scquareCity"
-
-export interface Task {
-    start: Node,
-    end: Node,
-    route: Node[],
-    active: boolean,
-    deliverd: boolean,
-}
 
 export class Game {
     width: number
@@ -62,10 +54,9 @@ export class Game {
         points: number,
         autoTaskAssign: boolean,
         isFirstGame: boolean,
-        speedLevel: number
+        speedLevel: number,
+        autoBuyAgents: boolean
     }
-
-    tasks: Task[]
 
     // adding edges
     edgeBuild: {
@@ -117,7 +108,6 @@ export class Game {
         this.allRoutes = []
         this.selectedRoutes = []
         this.agents = []
-        this.tasks = []
 
         this.gameState = {
             numAgents: 1,
@@ -129,14 +119,17 @@ export class Game {
             points: 0,
             autoTaskAssign: false,
             isFirstGame: false,
-            speedLevel: 0
+            speedLevel: 0,
+            autoBuyAgents: false,
         }
 
-        const { edges, nodes } = deser
+
+        const { edges, nodes } = generateRandomTrainingsMap(150)//deser
 
         this.edges = edges
         this.nodes = nodes
         this.initRoutes()
+        this.addRoads()
 
         // only graphical fancyness -> no functionality
         this.pizzaAnimation = []
@@ -153,75 +146,12 @@ export class Game {
 
     initRoutes() {
         this.allRoutes = getAllRoutesDict(this.nodes)
-        for (let i = 0; i < 10; i++) {
-            this.allRoutes[i].routes.forEach(r => {
-                this.selectedRoutes.push(r)
-            })
+
+        let allLongRoutes: Node[][] = []
+        for (let i = 0; i < this.allRoutes.length; i++) {
+            allLongRoutes = [...allLongRoutes, ...this.allRoutes[i].routes]
         }
-
-        this.addRoads()
-    }
-
-    addTasks(startNode: Node, num: number) {
-        const tasks = []
-        let trys = 0
-        const usedEndNodes = []
-        while (tasks.length < num && trys <= 10) {
-            const r = this.getNewRouteFrom(startNode)
-            const endNode = r[r.length - 1]
-            trys += 1 // in case every route is used
-            if (usedEndNodes.includes(endNode)) return
-            tasks.push({
-                start: startNode,
-                end: endNode,
-                route: r
-            })
-            usedEndNodes.push(endNode)
-        }
-
-        tasks.forEach(t => {
-            this.tasks.push(t)
-        })
-    }
-
-    activateTask(task: Task) {
-        // task got activated! add route to agent; set task to active
-        const availableAgents = this.agents
-            .filter(a => a.routes.length === 0) // has no task
-            .filter(a => a.spawnSettings.startNode === task.start) // works at tasks station
-
-        if (availableAgents.length === 0) return
-
-        task.active = true
-        const agent = availableAgents[0]
-
-        const toTarget: Route = new Route(task, task.route, getCheckpoints(task.route), false)
-        agent.routes.push(toTarget)
-
-        const routeBack = search(this.nodes, task.end, agent.spawnSettings.startNode)
-        const fromTarget: Route = new Route(task, routeBack, getCheckpoints(routeBack), true)
-        agent.routes.push(fromTarget)
-
-        const dir = directionOfNodes(task.route[0], task.route[1])
-        if (agent.routes.length > 1) {
-            agent.spawnSettings.direction.x = dir.x
-            agent.spawnSettings.direction.y = dir.y
-            agent.dir.x = dir.x
-            agent.dir.y = dir.y
-        }
-
-        this.tasks.sort((a, b) => !a.active ? -1 : 0)
-    }
-
-    addTask(startNode: Node) {
-        const r = this.getNewRouteFrom(startNode)
-        this.tasks.push({
-            start: startNode,
-            end: r[r.length - 1],
-            route: r,
-            active: false,
-            deliverd: false,
-        })
+        this.selectedRoutes = allLongRoutes
     }
 
     addRoads() {
@@ -229,10 +159,6 @@ export class Game {
         this.roads = this.nodes.reduce((acc, n) => {
             return acc.concat(n.getLines(usedIds))
         }, [])
-    }
-
-    getRandomRoute() {
-        return this.selectedRoutes[randInt(0, this.selectedRoutes.length - 1)]
     }
 
     spawnAgent(station: Node, mutate: boolean = false) {
@@ -254,46 +180,61 @@ export class Game {
             this.intersections = []
             this.sensorVisual = []
 
-            this.agents.filter(a => !a.alive && a.routes.length > 0).forEach(a => {
-                a.routes.forEach(r => {
-                    r.task.active = false
-                })
+            // died with an active task
+            this.agents.filter(a => !a.alive && a.task !== undefined).forEach(a => {
+                // agent delivered -> set task undefined, after respawn it gets a new task
+                if (a.task.delivered) {
+                    a.task = undefined
+                }
+                // otherwise agent will try again
             })
+
             this.agents = this.agents.filter(a => a.alive)
             this.agents = this.agents.filter(a => a.tickSinceLastCP < 100)
-            this.agents.filter(a => a.routes.length > 0).forEach(a => {
+
+            // assign new tasks
+            this.agents.filter(a => a.task === undefined).forEach(a => {
+                const nodesFromStation = this.selectedRoutes.filter(r => r[0] === this.gameState.stations[0])
+                const route = nodesFromStation[randInt(0, nodesFromStation.length - 1)]
+                const task: Task = {
+                    start: route[0],
+                    target: route[route.length - 1],
+                    delivered: false
+                }
+                updateOrientation(a, route)
+                a.route = getCheckpoints(route)
+                a.task = task
+                a.reset()
+            })
+
+            this.agents.forEach(a => {
                 // transform sensors to current position & direction
                 const transformedSensors = a.sensors.map(sensor => transformSensor(sensor, a))
                 this.sensorVisual = [...this.sensorVisual, ...transformedSensors]
                 const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, this.roads)
                 this.intersections = [...this.intersections, ...roadIntersections[1]]
 
-                const currentCheckpoint = [a.routes[0].checkpoints[a.reachedCheckpoints % a.routes[0].checkpoints.length]]
+                const currentCheckpoint = [a.route[a.reachedCheckpoints % a.route.length]]
                 const checkpointIntersections = getSensorIntersectionsWith(a, transformedSensors, currentCheckpoint)
                 const inputs = [...roadIntersections[0], ...checkpointIntersections[0]]
 
-                const finishedCurrentRoute = agentsCollisions(a, this.roads, a.routes[0].checkpoints)
+                const finishedCurrentRoute = agentsCollisions(a, this.roads, a.route)
 
                 a.update(inputs, this.gameState.speedLevel)
 
                 if (finishedCurrentRoute) {
-                    const finishedRoute = a.routes.shift()
-                    if (!finishedRoute.isEnd) {
-                        reroute(a, a.routes[0])
-                        finishedRoute.task.deliverd = true
-
-                        this.addPizzaAnimation(finishedRoute)
-                        const profit = this.handleMoney(finishedRoute.nodes.length)
-                        this.scrollingTexts.push(
-                            {
-                                value: profit,
-                                pos: finishedRoute.nodes[finishedRoute.nodes.length - 1].pos.copy(),
-                                factor: 1
-                            }
-                        )
+                    if (a.task.delivered) {
+                        a.task = undefined
                     } else {
-                        a.spawnSettings.startNode = finishedRoute.nodes[finishedRoute.nodes.length - 1]
-                        this.tasks = this.tasks.filter(t => t !== finishedRoute.task)
+                        // agent reached end, search route from end to start
+                        const routeBack = search(this.nodes, a.task.target, a.task.start)
+                        updateOrientation(a, routeBack)
+                        a.route = getCheckpoints(routeBack);
+                        a.task.delivered = true
+
+                        const profit = this.handleMoney(a.route.length)
+                        this.addScrollingText(profit, a.task.target.pos)
+                        this.addPizzaAnimation(a.task.target.pos)
 
                     }
                     a.reset()
@@ -310,21 +251,26 @@ export class Game {
         this.pizzaAnimation = this.pizzaAnimation.filter(d => d.factor >= 0)
         this.scrollingTexts = this.scrollingTexts.filter(d => d.factor >= 0)
 
-        const availTasks = this.tasks.filter(t => !t.active)
-        if (availTasks.length > 0) {
-            this.activateTask(availTasks[0])
-        }
-
-        if (availTasks.length < 5) {
-            this.addTasks(this.gameState.stations[0], 5)
-        }
-
         updateAgents()
 
         while (this.agents.length < this.gameState.numAgents) {
             this.spawnAgent(this.gameState.stations[0], true)
         }
         this.rerender()
+
+        if (this.gameState.autoBuyAgents) {
+            this.buyAgent()
+        }
+    }
+
+    addScrollingText(profit: number, pos: Vector) {
+        this.scrollingTexts.push(
+            {
+                value: profit,
+                pos: pos.copy(),
+                factor: 1
+            }
+        )
     }
 
     mouseClicked(mouseX: number, mouseY: number) {
@@ -337,7 +283,6 @@ export class Game {
             this.gameState.stations.push(pickedNode)
             this.gameState.pickingFirstNode = false
             this.spawnAgent(pickedNode)
-            this.addTasks(pickedNode, 3)
             this.rerender()
         } else if (this.edgeBuild.active) {
             if (pickedNode === undefined) return
@@ -351,9 +296,9 @@ export class Game {
                 this.connectNodes(this.edgeBuild.startNode, pickedNode)
                 this.edgeBuild.startNode = undefined
                 this.edgeBuild.active = false
+                this.addRoads()
             }
         }
-
     }
 
     getNewRouteFrom(sNode: Node): Node[] {
@@ -377,9 +322,9 @@ export class Game {
         return r
     }
 
-    addPizzaAnimation(route: Route) {
+    addPizzaAnimation(pos: Vector) {
         const newDespawn: DespawnAnimation = {
-            pos: route.nodes[route.nodes.length - 1].pos.copy(),
+            pos: pos.copy(),
             factor: 1.5
         }
         this.pizzaAnimation.push(newDespawn)
@@ -423,12 +368,16 @@ export class Game {
         this.gameState.speedLevel++
         this.rerender()
     }
+
+    toggleAutoBuy() {
+        this.gameState.autoBuyAgents = !this.gameState.autoBuyAgents
+    }
 }
 
-const reroute = (agent: Agent, route: Route) => {
-    const dir = directionOfNodes(route.nodes[0], route.nodes[1])
+const updateOrientation = (agent: Agent, route: Node[]) => {
+    const dir = directionOfNodes(route[0], route[1])
     agent.spawnSettings.direction = dir
-    agent.spawnSettings.startNode = route.nodes[0]
+    agent.spawnSettings.startNode = route[0]
 }
 
 export default Game

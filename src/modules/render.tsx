@@ -6,6 +6,7 @@ import { Node, Line, Vector } from "./models";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
+    context.fillStyle = color
     lines.forEach((l, i) => {
         context.beginPath();
         context.moveTo(l.p1.x, l.p1.y);
@@ -56,7 +57,7 @@ export const renderAgents = (agents: Agent[], context) => {
         context.rotate(degToRad(a.dir.heading()))
         context.fillRect(- (s / 2), - (s / 2), s * 2, s)
         context.restore()
-        if (a.routes[0] && !a.routes[0].isEnd) {
+        if (a.route && a.task && !a.task.delivered) {
             var img = document.getElementById("pizza");
             //context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
             context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);

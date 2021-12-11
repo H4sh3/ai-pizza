@@ -59,12 +59,13 @@ const GameUI: React.FC = () => {
             }
             game.currTime = time
 
-            renderLines(game.intersections, context, "#000000", true)
+            //renderLines(game.intersections, context, "#FFFFFF", true)
             renderAgents(game.agents, context)
 
             if (game.gameState.stations.length > 0) {
                 renderStations(game.gameState.stations, context)
             }
+
             // used when the user picks first station
             if (game.gameState.pickingFirstNode) {
                 const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
@@ -77,14 +78,13 @@ const GameUI: React.FC = () => {
                     renderNodes(game.nodes.filter(n => n.getNeightbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
                 } else {
                     const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
-                    const nodesWithRightDist = game.nodes.filter(n => n.pos.dist(game.edgeBuild.startNode.pos) === NODE_SIZE * 3)
+                    const nodesWithRightDist = game.nodes.filter(n => n.pos.dist(game.edgeBuild.startNode.pos) === NODE_SIZE * 2)
                     const notANeighbour = nodesWithRightDist.filter(n => !game.edgeBuild.startNode.getNeightbours().includes(n))
                     renderNodes(notANeighbour, context, "rgba(0,200,0,70)", highlightedNode)
                 }
             }
 
-            renderNodes(game.tasks.filter(t => !t.deliverd && t.active).map(t => t.end), context, "rgba(0,200,0,0.4)")
-
+            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00FF00")
             renderPizzaAnimations(game.pizzaAnimation, context)
             renderProfitTexts(game.scrollingTexts, context)
 
@@ -257,11 +257,17 @@ export const Store: React.FC<UsesGame> = ({ game }) => {
                 </div>
             </div>
             <div className="flex flex-col gap-2 p-2">
-                <Button
-                    disabled={gameState.money < prices.agent}
-                    onClick={() => { game.buyAgent() }}>
-                    {`+1 Agent - ${prices.agent}$`}
-                </Button>
+                <div className="flex flex-row gap-2">
+                    <Button
+                        disabled={gameState.money < prices.agent}
+                        onClick={() => { game.buyAgent() }}>
+                        {`+1 Agent - ${prices.agent}$`}
+                    </Button>
+                    <Button
+                        onClick={() => { game.toggleAutoBuy() }}>
+                        {game.gameState.autoBuyAgents ? "auto buy on" : "auto buy off"}
+                    </Button>
+                </div>
                 <Button
                     disabled={gameState.money < prices.addEdge}
                     onClick={() => { game.buyEdge() }}>
@@ -270,7 +276,7 @@ export const Store: React.FC<UsesGame> = ({ game }) => {
                 <Button
                     disabled={gameState.money < prices.speed || gameState.speedLevel === 3} // max level atm
                     onClick={() => { game.buySpeed() }}>
-                    {`Agent speed - ${gameState.speedLevel === 3 ? 'MAX' : `${prices.speed}$`}`}
+                    {`Agent speed ${gameState.speedLevel + 1} - ${gameState.speedLevel === 3 ? 'MAX' : `${prices.speed}$`}`}
                 </Button>
             </div>
         </div>
