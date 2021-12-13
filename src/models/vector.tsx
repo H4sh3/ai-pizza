@@ -1,0 +1,84 @@
+
+import { degToRad, radToDeg } from "../modules/math";
+
+export class Vector {
+    x: number
+    y: number
+
+    constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+    }
+
+    dist(other: Vector) {
+        return Math.sqrt(Math.pow(this.x - other.x, 2) + Math.pow(this.y - other.y, 2));
+    }
+
+    add(other: Vector) {
+        this.x += other.x
+        this.y += other.y
+        return this
+    }
+
+    sub(other: Vector) {
+        this.x -= other.x
+        this.y -= other.y
+        return this
+    }
+
+    mult(scalar: number) {
+        this.x *= scalar
+        this.y *= scalar
+        return this
+    }
+
+    div(scalar: number) {
+        this.x /= scalar
+        this.y /= scalar
+    }
+
+    copy() {
+        return new Vector(this.x, this.y)
+    }
+
+    rotate(deg: number) {
+        const theta = degToRad(deg);
+
+        const cs = Math.cos(theta);
+        const sn = Math.sin(theta);
+
+        const tmpX = this.x * cs - this.y * sn;
+        this.y = this.x * sn + this.y * cs;
+        this.x = tmpX
+        return this
+    }
+
+    normalize() {
+        if (Math.abs(this.x) > Math.abs(this.y)) {
+            this.y /= this.x
+            this.x /= this.x
+        } else {
+            this.x /= this.y
+            this.y /= this.y
+        }
+        return this
+    }
+
+    heading() {
+        return radToDeg(Math.atan2(this.y, this.x))
+    }
+
+    mag() {
+        return Math.sqrt((this.x * this.x) + (this.y * this.y))
+    }
+}
+
+export const isVector = (value: any): value is Vector => {
+    return (
+        !value === false &&
+        "x" in value &&
+        "y" in value
+    )
+}
+
+export default Vector

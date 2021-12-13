@@ -26,8 +26,4 @@ it('should give us all long routes with a certain start node', () => {
     for (let i = 0; i < 10; i++) {
         allLongRoutes = [...allLongRoutes, ...allRoutes[i].routes]
     }
-
-    allLongRoutes = allLongRoutes.filter(r => r[0] === startNode)
-
-
 });
