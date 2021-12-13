@@ -1,4 +1,5 @@
-import { Line, Vector } from "./models";
+import { Vector } from "../models/vector";
+import { Line } from "../modules/models";
 
 export function radToDeg(radians) {
     var pi = Math.PI;

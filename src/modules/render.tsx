@@ -1,8 +1,10 @@
 import { DespawnAnimation } from "./models";
 import Agent from "./agent";
 import { NODE_SIZE } from "./const";
-import { degToRad } from "./math";
-import { Node, Line, Vector } from "./models";
+import { degToRad } from "../etc/math";
+import { Node, Line } from "./models";
+import Vector from "../models/vector";
+import { NewNode } from "../models/graph";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
@@ -18,7 +20,7 @@ export const renderLines = (lines: Line[], context, color, withArc: boolean = fa
     })
 }
 
-export const renderNodes = (nodes: Node[], context, color: string, highlightedNode: Node | undefined = undefined) => {
+export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, highlightedNode: Node | NewNode | undefined = undefined) => {
     nodes.forEach(n => {
         if (n === highlightedNode) {
             context.fillStyle = "#00FF00"

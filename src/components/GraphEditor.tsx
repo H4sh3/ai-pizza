@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { Edge, Node, Vector } from "../modules/models"
 import { renderLines, renderNodes } from "../modules/render"
 import { addEdge } from "../modules/maps/trainingsEnv"
 import Agent from "../modules/agent"
+import { connectNodes, getLine, NewEdge, NewNode } from "../models/graph"
+import Vector from "../models/vector"
 
 const state = {
-    nodes: [] as Node[],
-    edges: [] as Edge[],
+    nodes: [] as NewNode[],
+    edges: [] as NewEdge[],
     nodeMode: true,
     gridCursor: {
         x: 0,
@@ -18,50 +19,15 @@ const state = {
     grid: []
 }
 
-export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] } => {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
-
-    // 1. create nodes with id and pos
-    nodesSer.forEach(n => {
-        nodes.push(new Node(n.id, n.x, n.y))
-    })
-
-    // 2. create edges with nodes
-    edgesSer.forEach(eSer => {
-        const n1 = nodes.find(n => n.id === eSer.start)
-        const n2 = nodes.find(n => n.id === eSer.end)
-        const e = new Edge(n1, n2, eSer.id)
-        edges.push(e)
-    })
-
-    // 3. iterate over nodes and set edges on connections
-    nodesSer.forEach(n => {
-        const node = nodes.find(nx => nx.id === n.id)
-        Object.keys(n.connections).forEach(dir => {
-            if (n.connections[dir] === -1) {
-
-            } else {
-                const e = edges.find(e => e.id === n.connections[dir])
-                node.connections[dir] = e
-            }
-        })
-    })
-    return { nodes, edges }
-}
-
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
 const dotsY = Math.floor(HEIGHT / (NODE_SIZE * 2))
-console.log(dotsX)
-console.log(dotsY)
 for (let x = 1; x < dotsX; x++) {
     for (let y = 1; y < dotsY; y++) {
         state.grid.push({ x: x * (WIDTH / dotsX), y: y * (HEIGHT / dotsY) })
     }
 }
 
-const borderGrayAndP = "border-2 border-gray-300 p-2"
-const MapEditor: React.FC = () => {
+const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
 
     const props = {
@@ -76,26 +42,28 @@ const MapEditor: React.FC = () => {
     const canvasRef = useRef(null)
 
     const onmousemove = (e) => {
-        state.gridCursor.x = Math.round(e.clientX / (WIDTH / dotsX)) * (WIDTH / dotsX)
-        state.gridCursor.y = Math.round(e.clientY / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
+        state.gridCursor.x = Math.round((e.clientX - NODE_SIZE) / (WIDTH / dotsX)) * (WIDTH / dotsX)
+        state.gridCursor.y = Math.round((e.clientY - NODE_SIZE) / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
     }
 
     const onmousedown = () => {
         if (state.nodeMode) {
-            state.nodes.push(new Node(state.nodes.length, state.gridCursor.x, state.gridCursor.y))
+            state.nodes.push(new NewNode(new Vector(state.gridCursor.x, state.gridCursor.y)))
         } else {
             const node = getNodeAtCursor()
+            if (node === undefined) return
             if (state.selectedNode === undefined) {
                 state.selectedNode = node
             } else {
-                const e = addEdge(state.selectedNode, node)
+                const e: NewEdge | undefined = connectNodes(state.selectedNode, node)
+                if (e === undefined) return
+
                 state.edges.push(e)
                 state.edges.map((e, i) => e.id = i)
                 state.selectedNode = undefined
             }
         }
     }
-
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -109,6 +77,9 @@ const MapEditor: React.FC = () => {
             context.fillStyle = "rgba(160, 160, 160,10)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
+            context.fillStyle = "rgba(250, 250, 0,10)";
+            context.fillRect(state.gridCursor.x, state.gridCursor.y, 3, 3)
+
             lastTime = time
 
             // grid cursor 
@@ -120,11 +91,11 @@ const MapEditor: React.FC = () => {
 
             drawGrid(context)
 
-            const highlightedNode: Node = getNodeAtCursor()
+            const highlightedNode: NewNode = getNodeAtCursor()
             renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
 
             const usedIds = []
-            const lines = state.nodes.reduce((acc, n) => { return [...acc, ...n.getLines(usedIds)] }, [])
+            const lines = state.edges.map(e => getLine(e))
             renderLines(lines, context, "#000000")
         }
 
@@ -159,48 +130,10 @@ const MapEditor: React.FC = () => {
                 }>
                 Delete last node
             </Button>
-            <Button
-                onClick={
-                    () => {
-                        serialize()
-                    }
-                }>
-                Serialize!
-            </Button>
 
         </div>
     </div >
 }
-
-const getEdgeIds = (node: Node) => {
-    const left = node.connections.left === undefined ? -1 : node.connections.left.id
-    const right = node.connections.right === undefined ? -1 : node.connections.right.id
-    const top = node.connections.top === undefined ? -1 : node.connections.top.id
-    const bottom = node.connections.bottom === undefined ? -1 : node.connections.bottom.id
-
-    return `{
-        "left":${left},
-        "right":${right},
-        "top":${top},
-        "bottom":${bottom},
-    }`
-}
-
-const serialize = () => {
-    let s = "[\n"
-    state.nodes.forEach(n => {
-        s += `{"id":${n.id} , "x":${n.pos.x} , "y":${n.pos.y}, "connections":${getEdgeIds(n)}},`
-    })
-    s += `\n]`
-    console.log(s)
-    let e = "[\n"
-    state.edges.forEach(n => {
-        e += `{"id":${n.id} , "start":${n.startNode.id} , "end":${n.endNode.id} },`
-    })
-    e += `\n]`
-    console.log(e)
-}
-
 
 const getNodeAtCursor = () => {
     return state.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(state.gridCursor.x, state.gridCursor.y)) < nodeSelectionRange)
@@ -217,10 +150,6 @@ const drawGrid = (context) => {
     })
 }
 
-
-
-
-
 interface ButtonProps {
     onClick: () => void
     disabled?: boolean
@@ -236,4 +165,4 @@ const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) 
     </div>
 }
 
-export default MapEditor;
+export default GraphEditor;

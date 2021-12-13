@@ -1,3 +1,4 @@
+import Vector from "../models/vector";
 import { NODE_SIZE } from "./const";
 import { addEdge } from "./maps/trainingsEnv";
 
