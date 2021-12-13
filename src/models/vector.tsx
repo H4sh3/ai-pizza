@@ -35,6 +35,7 @@ export class Vector {
     div(scalar: number) {
         this.x /= scalar
         this.y /= scalar
+        return this
     }
 
     copy() {
@@ -54,13 +55,9 @@ export class Vector {
     }
 
     normalize() {
-        if (Math.abs(this.x) > Math.abs(this.y)) {
-            this.y /= this.x
-            this.x /= this.x
-        } else {
-            this.x /= this.y
-            this.y /= this.y
-        }
+        const mag = this.mag()
+        this.y /= mag;
+        this.x /= mag;
         return this
     }
 
