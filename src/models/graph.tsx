@@ -3,6 +3,7 @@ import { checkLineIntersection } from "../etc/math";
 import { Edge, Line } from "../modules/models";
 import Vector, { isVector } from "./vector";
 import { v4 as uuidv4 } from 'uuid';
+import { NODE_SIZE } from "../modules/const";
 
 export class NewNode {
     pos: Vector
@@ -41,16 +42,13 @@ export class NewEdge {
 }
 
 export const connectNodes = (nodes: NewNode[], edges: NewEdge[], n1: NewNode, n2: NewNode) => {
-
-    // check for intersections
-
     const edgesToRemove: string[] = [];
     const newConnections: { s: NewNode, e: NewNode }[] = [];
-    // alrdy connected
-    if (n1.edges.some(e => e.getOther(n1) === n2)) {
-        return { edgesToRemove, newConnections }
-    }
+    // start and end are same node
+    if (n1 === n2) return { edgesToRemove, newConnections }
 
+    // already connected
+    if (n1.edges.some(e => e.getOther(n1) === n2)) return { edgesToRemove, newConnections }
 
     // find intersections for new edge
     const newEdgeLine: Line = new Line(n1.pos.x, n1.pos.y, n2.pos.x, n2.pos.y)
@@ -71,18 +69,28 @@ export const connectNodes = (nodes: NewNode[], edges: NewEdge[], n1: NewNode, n2
     // if we have intersection use closest to n1
     if (intersections.length > 0) {
         intersections.sort((a, b) => a.pos.dist(n1.pos) < b.pos.dist(n1.pos) ? -1 : 0)
-        const e = intersections[0].e;
-        const newNode = new NewNode(intersections[0].pos)
-        nodes.push(newNode)
+        const { e, pos } = intersections[0];
 
-        e.node1.removeEdge(e)
-        e.node2.removeEdge(e)
+        const nodeInRange = nodes.filter(n => n !== n1 && n !== n2).find(n => n.pos.dist(pos) < NODE_SIZE)
 
-        newConnections.push({ s: e.node1, e: newNode })
-        newConnections.push({ s: newNode, e: e.node2 })
-        newConnections.push({ s: n1, e: newNode })
-        newConnections.push({ s: newNode, e: n2 })
-        edgesToRemove.push(e.id)
+        if (nodeInRange) {
+            newConnections.push({ s: n1, e: nodeInRange })
+            newConnections.push({ s: n2, e: nodeInRange })
+        } else {
+
+            if (nodes.some(n => n.pos.dist(pos) < NODE_SIZE * 2)) return { edgesToRemove, newConnections }
+            const newNode = new NewNode(pos)
+            nodes.push(newNode)
+
+            e.node1.removeEdge(e)
+            e.node2.removeEdge(e)
+
+            newConnections.push({ s: e.node1, e: newNode })
+            newConnections.push({ s: newNode, e: e.node2 })
+            newConnections.push({ s: n1, e: newNode })
+            newConnections.push({ s: newNode, e: n2 })
+            edgesToRemove.push(e.id)
+        }
     } else {
         // no intersection: add edge
         addEdge(edges, n1, n2)
@@ -104,11 +112,13 @@ export const getLine = (e: NewEdge): Line => {
 
 export const complexConnect = (nodes: NewNode[], edges: NewEdge[], n1: NewNode, n2: NewNode) => {
     let toAdd = [{ s: n1, e: n2 }]
-    while (toAdd.length > 0) {
+    let cnt = 0
+    while (toAdd.length > 0 && cnt < 10) {
         const { s, e } = toAdd.shift()
         const { edgesToRemove, newConnections } = connectNodes(nodes, edges, s, e)
         edges = edges.filter(e => !edgesToRemove.includes(e.id))
         toAdd = toAdd.concat(newConnections)
+        cnt += 1
     }
     return edges
 }

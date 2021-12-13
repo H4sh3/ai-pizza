@@ -5,6 +5,7 @@ import { addEdge } from "../modules/maps/trainingsEnv"
 import Agent from "../modules/agent"
 import { complexConnect, connectNodes, getLine, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
+import { randInt } from "../etc/math"
 
 const state = {
     nodes: [] as NewNode[],
@@ -64,8 +65,8 @@ const GraphEditor: React.FC = () => {
     const canvasRef = useRef(null)
 
     const onmousemove = (e) => {
-        state.gridCursor.x = Math.round((e.clientX - NODE_SIZE) / (WIDTH / dotsX)) * (WIDTH / dotsX)
-        state.gridCursor.y = Math.round((e.clientY - NODE_SIZE) / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
+        state.gridCursor.x = Math.round((e.clientX) / (WIDTH / dotsX)) * (WIDTH / dotsX)
+        state.gridCursor.y = Math.round((e.clientY) / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
     }
 
     const onmousedown = () => {
@@ -149,12 +150,28 @@ const GraphEditor: React.FC = () => {
                 Delete last node
             </Button>
 
+            <Button
+                onClick={
+                    () => {
+                        const other = state.nodes[randInt(0, state.nodes.length - 1)]
+                        const n = new NewNode(new Vector(randInt(0, WIDTH), randInt(0, HEIGHT)))
+                        if (state.nodes.find(x => x.pos.dist(n.pos) < NODE_SIZE * 2)) {
+                            return
+                        }
+                        state.nodes.push(n)
+                        state.edges = complexConnect(state.nodes, state.edges, n, other)
+                        RERENDER()
+                    }
+                }>
+                WOW!
+            </Button>
+
         </div>
     </div >
 }
 
 const getNodeAtCursor = () => {
-    return state.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(state.gridCursor.x, state.gridCursor.y)) < nodeSelectionRange)
+    return state.nodes.find(n => n.pos.copy().dist(new Vector(state.gridCursor.x, state.gridCursor.y)) < nodeSelectionRange)
 }
 
 const drawGrid = (context) => {
