@@ -116,7 +116,7 @@ const GameUI: React.FC = () => {
             // renderNodes(game.nodes, context, "#AAAAAA")
             // renderLines(game.edges.map(e => e.getLine()), context, "#FFFFFF")
 
-            // renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00FF00")
+            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#0000FF")
 
             renderLines(game.roads, context, "#FFFFFF")
 
