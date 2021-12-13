@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { renderLines, renderNodes } from "../modules/render"
-import { addEdge } from "../modules/maps/trainingsEnv"
-import Agent from "../modules/agent"
-import { complexConnect, connectNodes, getLine, NewEdge, NewNode } from "../models/graph"
+import { renderLines, renderNodes, renderPoint } from "../modules/render"
+import { complexConnect, connectNodes, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
 import { randInt } from "../etc/math"
+import { Intersection } from "../models/city"
 
 const state = {
     nodes: [] as NewNode[],
@@ -17,7 +16,8 @@ const state = {
     },
     res: NODE_SIZE,
     selectedNode: undefined,
-    grid: []
+    grid: [],
+    intersections: []
 }
 
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
@@ -30,24 +30,42 @@ for (let x = 1; x < dotsX; x++) {
 
 const center = new Vector(WIDTH / 2, HEIGHT / 2);
 
-const n1 = new NewNode(center.copy().add(new Vector(-NODE_SIZE * 4, -NODE_SIZE * 4)))
-const n2 = new NewNode(center.copy().add(new Vector(-NODE_SIZE * 4, NODE_SIZE * 4)))
-const n3 = new NewNode(center.copy().add(new Vector(NODE_SIZE * 4, -NODE_SIZE * 4)))
-const n4 = new NewNode(center.copy().add(new Vector(NODE_SIZE * 4, NODE_SIZE * 4)))
+const dist = NODE_SIZE * 8
 
-const n5 = new NewNode(center.copy().add(new Vector(0, -NODE_SIZE * 6)))
-const n6 = new NewNode(center.copy().add(new Vector(0, NODE_SIZE * 6)))
+const n0 = new NewNode(center.copy().add(new Vector(-dist, -dist)));
+const n5 = new NewNode(center.copy().add(new Vector(-dist * 1.5, -dist * 1.5)));
 
+const n1 = new NewNode(center.copy().add(new Vector(dist, -dist)));
+const n4 = new NewNode(center.copy().add(new Vector(dist * 1.5, -dist * 1.5)));
+
+const n2 = new NewNode(center.copy().add(new Vector(0, 0)));
+const n3 = new NewNode(center.copy().add(new Vector(0, dist)));
+
+
+state.nodes.push(n0)
 state.nodes.push(n1)
 state.nodes.push(n2)
 state.nodes.push(n3)
 state.nodes.push(n4)
-
 state.nodes.push(n5)
-state.nodes.push(n6)
 
-connectNodes(state.nodes, state.edges, n1, n3)
-connectNodes(state.nodes, state.edges, n2, n4)
+
+connectNodes(state.nodes, state.edges, n0, n2)
+connectNodes(state.nodes, state.edges, n0, n5)
+
+connectNodes(state.nodes, state.edges, n1, n2)
+connectNodes(state.nodes, state.edges, n1, n4)
+
+connectNodes(state.nodes, state.edges, n2, n3)
+connectNodes(state.nodes, state.edges, n5, n4)
+
+state.intersections.push(new Intersection(n0))
+state.intersections.push(new Intersection(n1))
+state.intersections.push(new Intersection(n2))
+state.intersections.push(new Intersection(n3))
+
+state.intersections.push(new Intersection(n4))
+state.intersections.push(new Intersection(n5))
 
 
 const GraphEditor: React.FC = () => {
@@ -71,7 +89,7 @@ const GraphEditor: React.FC = () => {
 
     const onmousedown = () => {
         if (state.nodeMode) {
-            state.nodes.push(new NewNode(new Vector(state.gridCursor.x, state.gridCursor.y)))
+            //state.nodes.push(new NewNode(new Vector(state.gridCursor.x, state.gridCursor.y)))
         } else {
             const node = getNodeAtCursor()
             if (node === undefined) return
@@ -111,11 +129,26 @@ const GraphEditor: React.FC = () => {
             drawGrid(context)
 
             const highlightedNode: NewNode = getNodeAtCursor()
-            renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
+            //renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
 
-            const usedIds = []
-            const lines = state.edges.map(e => getLine(e))
-            renderLines(lines, context, "#000000")
+            //const lines = state.edges.map(e => getLine(e))
+            state.intersections.forEach(intersection => {
+                intersection.directions.forEach(d => {
+                    renderPoint(intersection.node.pos.copy().sub(d.pos), context, "#FFFFFF")
+                })
+            })
+
+            state.intersections.forEach(intersection => {
+                Object.keys(intersection.turning).forEach(k => {
+                    // Todo fix this
+                    renderLines([intersection.turning[k]], context, "#0000FF")
+                })
+            })
+
+            state.intersections.forEach(intersection => {
+                renderLines(intersection.borders, context, "#000000")
+            })
+
         }
 
         requestAnimationFrame(frame)

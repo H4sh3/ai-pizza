@@ -1,4 +1,4 @@
-import { Vector } from '../src/modules/models'
+import Vector from "../src/models/vector";
 
 it('vector add', () => {
     const v1: Vector = new Vector(10, 0)
@@ -120,4 +120,13 @@ it('vector chain', () => {
 
     expect(v.x).toBe(-51)
     expect(v.y).toBe(48)
+});
+
+it('heading etc', () => {
+    let v: Vector = new Vector(0, 0)
+    let v1: Vector = new Vector(5, 5)
+    let v2: Vector = new Vector(-5, -5)
+
+    expect(v1.copy().sub(v).heading()).toBeCloseTo(45)
+    expect(v2.copy().sub(v).heading()).toBeCloseTo(-135)
 });
