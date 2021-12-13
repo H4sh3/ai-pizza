@@ -3,13 +3,13 @@ import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
 import { renderLines, renderNodes } from "../modules/render"
 import { addEdge } from "../modules/maps/trainingsEnv"
 import Agent from "../modules/agent"
-import { connectNodes, getLine, NewEdge, NewNode } from "../models/graph"
+import { complexConnect, connectNodes, getLine, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
 
 const state = {
     nodes: [] as NewNode[],
     edges: [] as NewEdge[],
-    nodeMode: true,
+    nodeMode: false,
     gridCursor: {
         x: 0,
         y: 0,
@@ -26,6 +26,28 @@ for (let x = 1; x < dotsX; x++) {
         state.grid.push({ x: x * (WIDTH / dotsX), y: y * (HEIGHT / dotsY) })
     }
 }
+
+const center = new Vector(WIDTH / 2, HEIGHT / 2);
+
+const n1 = new NewNode(center.copy().add(new Vector(-NODE_SIZE * 4, -NODE_SIZE * 4)))
+const n2 = new NewNode(center.copy().add(new Vector(-NODE_SIZE * 4, NODE_SIZE * 4)))
+const n3 = new NewNode(center.copy().add(new Vector(NODE_SIZE * 4, -NODE_SIZE * 4)))
+const n4 = new NewNode(center.copy().add(new Vector(NODE_SIZE * 4, NODE_SIZE * 4)))
+
+const n5 = new NewNode(center.copy().add(new Vector(0, -NODE_SIZE * 6)))
+const n6 = new NewNode(center.copy().add(new Vector(0, NODE_SIZE * 6)))
+
+state.nodes.push(n1)
+state.nodes.push(n2)
+state.nodes.push(n3)
+state.nodes.push(n4)
+
+state.nodes.push(n5)
+state.nodes.push(n6)
+
+connectNodes(state.nodes, state.edges, n1, n3)
+connectNodes(state.nodes, state.edges, n2, n4)
+
 
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -55,11 +77,7 @@ const GraphEditor: React.FC = () => {
             if (state.selectedNode === undefined) {
                 state.selectedNode = node
             } else {
-                const e: NewEdge | undefined = connectNodes(state.selectedNode, node)
-                if (e === undefined) return
-
-                state.edges.push(e)
-                state.edges.map((e, i) => e.id = i)
+                state.edges = complexConnect(state.nodes, state.edges, node, state.selectedNode)
                 state.selectedNode = undefined
             }
         }

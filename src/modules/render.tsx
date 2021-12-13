@@ -21,7 +21,7 @@ export const renderLines = (lines: Line[], context, color, withArc: boolean = fa
 }
 
 export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, highlightedNode: Node | NewNode | undefined = undefined) => {
-    nodes.forEach(n => {
+    nodes.forEach((n, i) => {
         if (n === highlightedNode) {
             context.fillStyle = "#00FF00"
             context.strokeStyle = "#00FF00"
@@ -33,6 +33,12 @@ export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, h
         context.arc(n.pos.x, n.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
         context.stroke();
         context.fill();
+
+
+        context.fillStyle = "#000000"
+        context.strokeStyle = "#000000"
+        context.font = "22px Comic Bold";
+        context.fillText(i, n.pos.x, n.pos.y);
     })
 }
 
