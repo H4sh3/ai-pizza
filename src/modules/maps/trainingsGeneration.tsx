@@ -51,7 +51,7 @@ export const generateRandomTrainingsMap = (n: number) => {
     nodes.map((e, i) => e.id = i)
 
     // random edges
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 10; i++) {
         let n = nodes[randInt(0, nodes.length - 1)]
 
         const direction = randInt(0, 4)

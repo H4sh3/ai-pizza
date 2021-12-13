@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react"
-import { allowedNeighbours, GAME_DURATION, HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { Node, Vector } from "../modules/models"
+import { allowedNeighbours, GAME_DURATION, HEIGHT, nodeSelectionRange, NODE_SIZE, SCORE_HEIGHT, SCORE_WIDTH, WIDTH } from "../modules/const"
+import { Line, Node, Vector } from "../modules/models"
 import Agent from "../modules/agent"
-import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts } from "../modules/render"
+import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts, renderIntersections } from "../modules/render"
 import Game from "../modules/game"
+import { map } from "../modules/math"
 
 const game = new Game(WIDTH, HEIGHT)
 const mouse = {
@@ -29,6 +30,7 @@ const GameUI: React.FC = () => {
     }
 
     const canvasRef = useRef(null)
+    const canvasScoreRef = useRef(null)
 
     const onmousemove = (e) => {
         mouse.x = e.clientX
@@ -43,6 +45,10 @@ const GameUI: React.FC = () => {
     useEffect(() => {
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
+
+        const canvasScore = canvasScoreRef.current
+        const contextScore = canvasScore.getContext('2d')
+
         let lastTime
         let frameId
         const frame = time => {
@@ -51,6 +57,33 @@ const GameUI: React.FC = () => {
             if (timeDelta < 1000 / 60) return
             context.fillStyle = "rgba(160, 160, 160,10)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
+
+            contextScore.fillStyle = "rgba(200, 200, 200,10)";
+            contextScore.fillRect(0, 0, SCORE_WIDTH, SCORE_HEIGHT)
+
+            // draw scores
+
+            const lastScores = []
+            const zero = HEIGHT
+
+            game.scores.forEach(score => {
+                for (let i = 1; i < score.length; i++) {
+                    const p1 = map(score[i - 1], 0, game.maxScore, 0, SCORE_HEIGHT)
+                    const p2 = map(score[i], 0, game.maxScore, 0, SCORE_HEIGHT)
+                    lastScores.push(new Line(map(i, 0, score.length, 0, SCORE_WIDTH / 2), zero - p1, map(i + 1, 0, score.length, 0, SCORE_WIDTH / 2), zero - p2))
+                }
+            })
+            renderLines(lastScores, contextScore, "#000000")
+
+            const lines = []
+            for (let i = 1; i < game.gameState.scores.length; i++) {
+                const p1 = map(game.gameState.scores[i - 1], 0, game.maxScore, 0, SCORE_HEIGHT)
+                const p2 = map(game.gameState.scores[i], 0, game.maxScore, 0, SCORE_HEIGHT)
+                const x1 = game.scores.length > 0 ? map(i, 0, game.scores[0].length, 0, SCORE_WIDTH / 2) : i * 5
+                const x2 = game.scores.length > 0 ? map(i + 1, 0, game.scores[0].length, 0, SCORE_WIDTH / 2) : i * 5
+                lines.push(new Line(x1, zero - p1, x2, zero - p2))
+            }
+            renderLines(lines, contextScore, "#FF0000")
 
             lastTime = time
 
@@ -72,24 +105,26 @@ const GameUI: React.FC = () => {
                 renderNodes(game.nodes.filter(n => n.getNeightbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
             }
 
-            if (game.edgeBuild.active) {
-                if (game.edgeBuild.startNode === undefined) {
+            if (game.shop.edgeBuild.active) {
+                if (game.shop.edgeBuild.startNode === undefined) {
                     const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
                     renderNodes(game.nodes.filter(n => n.getNeightbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
-                } else {
-                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
-                    const nodesWithRightDist = game.nodes.filter(n => n.pos.dist(game.edgeBuild.startNode.pos) === NODE_SIZE * 3)
-                    const notANeighbour = nodesWithRightDist.filter(n => !game.edgeBuild.startNode.getNeightbours().includes(n))
-                    renderNodes(notANeighbour, context, "rgba(0,200,0,70)", highlightedNode)
                 }
             }
 
-            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00FF00")
-            renderPizzaAnimations(game.pizzaAnimation, context)
-            renderProfitTexts(game.scrollingTexts, context)
+            renderNodes(game.shop.edgeBuild.validSecondNodes, context, "#00FFFF")
+            // renderNodes(game.nodes, context, "#AAAAAA")
+            // renderLines(game.edges.map(e => e.getLine()), context, "#FFFFFF")
+
+            // renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00FF00")
 
             renderLines(game.roads, context, "#FFFFFF")
+
+            // renderLines(game.intersections, context, "#FF0000")
+
             if (game.gameState.running) {
+                renderPizzaAnimations(game.pizzaAnimation, context)
+                renderProfitTexts(game.scrollingTexts, context)
                 game.step()
             }
         }
@@ -147,6 +182,7 @@ const GameUI: React.FC = () => {
                 </div>
             }
         </div>
+        <canvas style={{ "border": "1px solid #000000" }} ref={canvasScoreRef} height={SCORE_HEIGHT} width={SCORE_WIDTH} />
     </div >
 }
 
@@ -186,23 +222,6 @@ const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) 
         }}>
         {children}
     </div>
-}
-
-const getRouteLines = (agent: Agent) => {
-    const lines = {}
-    agent.routes.map(route => {
-        route.nodes.map(n => {
-            n.getEdges().map(e => {
-                if (lines[e.id]) {
-                    lines[e.id].cnt += 1
-                } else {
-                    lines[e.id] = { cnt: 1, e }
-                }
-            })
-        })
-    })
-    const arr = Object.keys(lines).map(k => { return lines[k] })
-    return arr.filter(e => e.cnt === 2).map(cntObject => cntObject.e.getLine())
 }
 
 const IntroMessage: React.FC = () => {
@@ -249,7 +268,8 @@ interface UsesGame {
 }
 
 export const Store: React.FC<UsesGame> = ({ game }) => {
-    const { prices, gameState } = game;
+    const { gameState } = game;
+    const { prices } = game.shop;
     return <div className={`shadow rounded-lg bg-gray-100`}>
         <div className="flex flex-col gap-2">
             <div className="text-xl rounded-t-lg font-bold text-center bg-orange-500 text-white py-1">

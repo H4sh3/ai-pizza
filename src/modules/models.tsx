@@ -1,4 +1,5 @@
 import { NODE_SIZE } from "./const";
+import { addEdge } from "./maps/trainingsEnv";
 import { degToRad, radToDeg } from "./math";
 
 
@@ -150,6 +151,7 @@ export class Edge {
     getLine(): Line {
         return new Line(this.startNode.pos.x, this.startNode.pos.y, this.endNode.pos.x, this.endNode.pos.y)
     }
+
 }
 
 export enum Direction {
@@ -169,6 +171,8 @@ export class Node {
         top: Edge | undefined,
         bottom: Edge | undefined
     }
+    lines: { line: Line, id: number }[]
+    edgeIds: number[]
 
     constructor(id: number, x: number, y: number) {
         this.id = id
@@ -180,6 +184,16 @@ export class Node {
             bottom: undefined,
         }
         this.color = "#AAAAAA"
+        this.lines = [];
+    }
+
+    removeEdge(edge: Edge) {
+        Object.keys(this.connections).forEach(direction => {
+            if (this.connections[direction] === edge) {
+                this.connections[direction] = undefined
+                console.log("removed")
+            }
+        })
     }
 
     getOpenDirections(): Direction[] {
@@ -250,8 +264,15 @@ export class Node {
         }
     }
 
-    getLines(usedEdges: number[]): Line[] {
-        const lines: Line[] = []
+    getLines(usedIds: number[]) {
+        return this.lines.filter(l => l.id == -1 || !usedIds.includes(l.id)).map(l => {
+            usedIds.push(l.id)
+            return l.line
+        })
+    }
+
+    initLines() {
+        this.lines = []
 
         Object.keys(this.connections).forEach(direction => {
             const { node, edgeId } = this.getDirection(direction)
@@ -261,89 +282,83 @@ export class Node {
                     const y1 = this.pos.y - NODE_SIZE
                     const x2 = this.pos.x + NODE_SIZE
                     const y2 = this.pos.y - NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: -1 })
                 }
                 if (direction === "right") {
                     const x1 = this.pos.x + NODE_SIZE
                     const y1 = this.pos.y - NODE_SIZE
                     const x2 = this.pos.x + NODE_SIZE
                     const y2 = this.pos.y + NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: -1 })
                 }
                 if (direction === "bottom") {
                     const x1 = this.pos.x - NODE_SIZE
                     const y1 = this.pos.y + NODE_SIZE
                     const x2 = this.pos.x + NODE_SIZE
                     const y2 = this.pos.y + NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: -1 })
                 }
                 if (direction === "left") {
                     const x1 = this.pos.x - NODE_SIZE
                     const y1 = this.pos.y - NODE_SIZE
                     const x2 = this.pos.x - NODE_SIZE
                     const y2 = this.pos.y + NODE_SIZE
-                    lines.push(new Line(x1, y1, x2, y2))
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: -1 })
                 }
-                return
-            }
-            if (usedEdges.includes(edgeId)) return
+            } else {
+                if (direction === "top") {
+                    const x1 = this.pos.x - NODE_SIZE
+                    const y1 = this.pos.y - NODE_SIZE
+                    const x2 = node.pos.x - NODE_SIZE
+                    const y2 = node.pos.y + NODE_SIZE
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: edgeId })
 
-            usedEdges.push(edgeId)
+                    const x1_2 = this.pos.x + NODE_SIZE
+                    const y1_2 = this.pos.y - NODE_SIZE
+                    const x2_2 = node.pos.x + NODE_SIZE
+                    const y2_2 = node.pos.y + NODE_SIZE
+                    this.lines.push({ line: new Line(x1_2, y1_2, x2_2, y2_2), id: edgeId })
+                }
+                if (direction === "left") {
+                    const x1 = this.pos.x - NODE_SIZE
+                    const y1 = this.pos.y - NODE_SIZE
+                    const x2 = node.pos.x + NODE_SIZE
+                    const y2 = node.pos.y - NODE_SIZE
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: edgeId })
 
-            if (direction === "top") {
-                const x1 = this.pos.x - NODE_SIZE
-                const y1 = this.pos.y - NODE_SIZE
-                const x2 = node.pos.x - NODE_SIZE
-                const y2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
+                    const x1_2 = this.pos.x - NODE_SIZE
+                    const y1_2 = this.pos.y + NODE_SIZE
+                    const x2_2 = node.pos.x + NODE_SIZE
+                    const y2_2 = node.pos.y + NODE_SIZE
+                    this.lines.push({ line: new Line(x1_2, y1_2, x2_2, y2_2), id: edgeId })
+                }
+                if (direction === "right") {
+                    const x1 = this.pos.x + NODE_SIZE
+                    const y1 = this.pos.y - NODE_SIZE
+                    const x2 = node.pos.x - NODE_SIZE
+                    const y2 = node.pos.y - NODE_SIZE
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: edgeId })
 
-                const x1_2 = this.pos.x + NODE_SIZE
-                const y1_2 = this.pos.y - NODE_SIZE
-                const x2_2 = node.pos.x + NODE_SIZE
-                const y2_2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-            if (direction === "left") {
-                const x1 = this.pos.x - NODE_SIZE
-                const y1 = this.pos.y - NODE_SIZE
-                const x2 = node.pos.x + NODE_SIZE
-                const y2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
+                    const x1_2 = this.pos.x + NODE_SIZE
+                    const y1_2 = this.pos.y + NODE_SIZE
+                    const x2_2 = node.pos.x - NODE_SIZE
+                    const y2_2 = node.pos.y + NODE_SIZE
+                    this.lines.push({ line: new Line(x1_2, y1_2, x2_2, y2_2), id: edgeId })
+                }
+                if (direction === "bottom") {
+                    const x1 = this.pos.x - NODE_SIZE
+                    const y1 = this.pos.y + NODE_SIZE
+                    const x2 = node.pos.x - NODE_SIZE
+                    const y2 = node.pos.y - NODE_SIZE
+                    this.lines.push({ line: new Line(x1, y1, x2, y2), id: edgeId })
 
-                const x1_2 = this.pos.x - NODE_SIZE
-                const y1_2 = this.pos.y + NODE_SIZE
-                const x2_2 = node.pos.x + NODE_SIZE
-                const y2_2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-            if (direction === "right") {
-                const x1 = this.pos.x + NODE_SIZE
-                const y1 = this.pos.y - NODE_SIZE
-                const x2 = node.pos.x - NODE_SIZE
-                const y2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
-
-                const x1_2 = this.pos.x + NODE_SIZE
-                const y1_2 = this.pos.y + NODE_SIZE
-                const x2_2 = node.pos.x - NODE_SIZE
-                const y2_2 = node.pos.y + NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
-            }
-            if (direction === "bottom") {
-                const x1 = this.pos.x - NODE_SIZE
-                const y1 = this.pos.y + NODE_SIZE
-                const x2 = node.pos.x - NODE_SIZE
-                const y2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1, y1, x2, y2))
-
-                const x1_2 = this.pos.x + NODE_SIZE
-                const y1_2 = this.pos.y + NODE_SIZE
-                const x2_2 = node.pos.x + NODE_SIZE
-                const y2_2 = node.pos.y - NODE_SIZE
-                lines.push(new Line(x1_2, y1_2, x2_2, y2_2))
+                    const x1_2 = this.pos.x + NODE_SIZE
+                    const y1_2 = this.pos.y + NODE_SIZE
+                    const x2_2 = node.pos.x + NODE_SIZE
+                    const y2_2 = node.pos.y - NODE_SIZE
+                    this.lines.push({ line: new Line(x1_2, y1_2, x2_2, y2_2), id: edgeId })
+                }
             }
         })
-
-        return lines
     }
 }
