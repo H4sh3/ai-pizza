@@ -5,6 +5,7 @@ import { complexConnect, connectNodes, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
 import { randInt } from "../etc/math"
 import { City, Intersection } from "../models/city"
+import { Node } from "../modules/models"
 
 const state = {
     nodes: [] as NewNode[],
@@ -33,37 +34,56 @@ const center = new Vector(WIDTH / 2, HEIGHT / 2);
 
 const dist = NODE_SIZE * 8
 
-const n0 = new NewNode(center.copy().add(new Vector(-dist, -dist)));
+const n0 = new NewNode(center.copy().add(new Vector(-dist, dist / 4)));
+const n1 = new NewNode(center.copy().add(new Vector(dist, 0)));
+const n2 = new NewNode(center.copy().add(new Vector(-dist, -dist / 4)));
+/*
 const n5 = new NewNode(center.copy().add(new Vector(-dist * 1.5, -dist * 1.5)));
 
-const n1 = new NewNode(center.copy().add(new Vector(dist, -dist)));
 const n4 = new NewNode(center.copy().add(new Vector(dist * 1.5, -dist * 1.5)));
 
-const n2 = new NewNode(center.copy().add(new Vector(0, 0)));
 const n3 = new NewNode(center.copy().add(new Vector(0, dist)));
 const n6 = new NewNode(center.copy().add(new Vector(0, -dist * 3)));
-
+ */
 
 state.nodes.push(n0)
 state.nodes.push(n1)
-state.nodes.push(n2)
+state.nodes.push(n2)/* 
 state.nodes.push(n3)
 state.nodes.push(n4)
 state.nodes.push(n5)
-state.nodes.push(n6)
+state.nodes.push(n6) */
 
 
-connectNodes(state.nodes, state.edges, n5, n6)
-connectNodes(state.nodes, state.edges, n4, n6)
+complexConnect(state.nodes, state.edges, n0, n1)
+complexConnect(state.nodes, state.edges, n2, n1)
+/* complexConnect(state.nodes, state.edges, n0, n2)
+complexConnect(state.nodes, state.edges, n0, n5)
+complexConnect(state.nodes, state.edges, n1, n2)
+complexConnect(state.nodes, state.edges, n1, n4)
+complexConnect(state.nodes, state.edges, n2, n3)
+complexConnect(state.nodes, state.edges, n5, n4) */
 
-connectNodes(state.nodes, state.edges, n0, n2)
-connectNodes(state.nodes, state.edges, n0, n5)
 
-connectNodes(state.nodes, state.edges, n1, n2)
-connectNodes(state.nodes, state.edges, n1, n4)
-
-connectNodes(state.nodes, state.edges, n2, n3)
-connectNodes(state.nodes, state.edges, n5, n4)
+const nodeCnt = {}
+state.nodes.forEach(n1 => {
+    state.nodes.forEach(n2 => {
+        console.log("conect!")
+        if (nodeCnt[n2.id] == undefined || nodeCnt[n2.id] < 2) {
+            // complexConnect(state.nodes, state.edges, n1, n2)
+            if (n1.id in nodeCnt) {
+                nodeCnt[n1.id] = 1
+            } else {
+                nodeCnt[n1.id] += 1
+            }
+            if (n2.id in nodeCnt) {
+                nodeCnt[n2.id] = 1
+            } else {
+                nodeCnt[n2.id] += 1
+            }
+        }
+    })
+})
 
 state.nodes.forEach(n => {
     state.city.addIntersection(n)
@@ -98,7 +118,14 @@ const GraphEditor: React.FC = () => {
             if (state.selectedNode === undefined) {
                 state.selectedNode = node
             } else {
-                state.edges = complexConnect(state.nodes, state.edges, node, state.selectedNode)
+                state.edges = complexConnect(state.nodes, state.edges, state.selectedNode, node)
+                state.city = new City()
+                state.nodes.forEach(n => {
+                    if (n.edges.length > 0) {
+                        state.city.addIntersection(n)
+                    }
+                })
+                state.city.addRoads()
                 state.selectedNode = undefined
             }
         }

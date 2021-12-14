@@ -100,7 +100,7 @@ export class Intersection {
 
         let noIntersections = false
         let limit = 50;
-        let turningDistance = 50
+        let turningDistance = 25
 
         while (!noIntersections && limit > 0) {
             noIntersections = true
@@ -139,20 +139,37 @@ export class Intersection {
             turningDistance += 1
         }
 
+
+        // check min max angle
+        let minAngle = Infinity
+        let maxAngle = 0
+        this.directions.forEach(d => {
+            if (Math.abs(d.angle) < minAngle) {
+                minAngle = Math.abs(d.angle)
+            }
+            if (Math.abs(d.angle) > maxAngle) {
+                maxAngle = Math.abs(d.angle)
+            }
+        })
+        const angleRange = maxAngle - minAngle
+        console.log({ angleRange })
+
         // if its only one node
-        if (Object.keys(this.turning).length < 2) {
+        if (Object.keys(this.turning).length < 2 || angleRange < 110) {
             const turn = this.turning[Object.keys(this.turning)[0]]
+            console.log(turn)
             this.turning[-1] = {
                 node: undefined,
                 edge: undefined,
                 line: {
-                    p1: turn.line.p1.copy().sub(this.node.pos).rotate(-90).add(this.node.pos),
-                    p2: turn.line.p2.copy().sub(this.node.pos).rotate(90).add(this.node.pos),
+                    p1: turn.line.p1.copy().sub(this.node.pos).rotate(-180).add(this.node.pos),
+                    p2: turn.line.p2.copy().sub(this.node.pos).rotate(180).add(this.node.pos),
                 }
             }
         }
 
-        // close the intersection where we have no turning
+
+        // close the intersection where no turning exists
         const pointRelations: { v: Vector, turning: Turning, angle: number }[] = [];
         const center = this.node.pos.copy()
         Object.keys(this.turning).forEach(k => {
