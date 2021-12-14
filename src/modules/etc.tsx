@@ -1,8 +1,9 @@
 import search from "../etc/astar"
 import Agent, { Sensor, SensorSettings } from "./agent"
 import { NODE_SIZE } from "./const"
-import { checkLineIntersection, map } from "./math"
-import { isVector, Line, Node, Vector } from "./models"
+import { checkLineIntersection, map } from "../etc/math"
+import { Line, Node } from "./models"
+import Vector, { isVector } from "../models/vector"
 
 export const getCheckpoints = (path: Node[]): Line[] => {
     // generates checkpoints for a list of nodes

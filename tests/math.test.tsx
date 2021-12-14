@@ -1,5 +1,5 @@
-import { map } from "../src/modules/math";
-import { randn_bm, randomGaussian } from "../src/thirdparty/nn";
+import { map } from "../src/etc/math";
+import { randomGaussian } from "../src/thirdparty/nn";
 
 it('map value from one range to other range', () => {
     const v1 = 50 // between 0 and 100

@@ -74,13 +74,11 @@ it('vector rotate', () => {
 it('vector normalize', () => {
     const v1: Vector = new Vector(10, 5)
     v1.normalize()
-    expect(v1.x).toBe(1)
-    expect(v1.y).toBe(0.5)
+    expect(v1.mag()).toBeCloseTo(1)
 
     const v2: Vector = new Vector(-5, 20)
     v2.normalize()
-    expect(v2.x).toBe(-0.25)
-    expect(v2.y).toBe(1)
+    expect(v2.mag()).toBeCloseTo(1)
 });
 
 

@@ -1,8 +1,9 @@
-import { Direction, Edge, isVector, Line, Node, Vector } from "../models"
-import { randInt } from "../math"
+import { Direction, Edge, Line, Node } from "../models"
+import { randInt } from "../../etc/math"
 import { HEIGHT, NODE_SIZE, WIDTH } from "../const"
 import { addEdge } from "./trainingsEnv"
-import { checkLineIntersection } from "../math"
+import { checkLineIntersection } from "../../etc/math"
+import Vector, { isVector } from "../../models/vector"
 
 export const generateRandomTrainingsMap = (n: number) => {
     const nodes: Node[] = []
