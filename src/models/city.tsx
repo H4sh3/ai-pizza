@@ -35,9 +35,9 @@ export class City {
 
     addRoads() {
         const turnings = this.intersections.reduce((acc, i) => {
-            Object.keys(i.turning).forEach(k => {
-                if (i.turning[k].node) {
-                    acc.push(i.turning[k])
+            Object.keys(i.turns).forEach(k => {
+                if (i.turns[k].node) {
+                    acc.push(i.turns[k])
                 }
             })
             return acc
@@ -77,13 +77,13 @@ export class Road {
 
 export class Intersection {
     node: NewNode
-    turning: { [nodeId: string]: Turning; } = {};
+    turns: Turning[]
     borders: Line[]
     directions: Direction[]
 
     constructor(node: NewNode) {
         this.node = node
-        this.turning = {};
+        this.turns = [];
         this.directions = []
         this.node.edges.map(e => {
             const other = e.getOther(node)
@@ -104,7 +104,7 @@ export class Intersection {
 
         while (!noIntersections && limit > 0) {
             noIntersections = true
-            this.turning = {};
+            this.turns = [];
             this.directions.forEach(d => {
                 const p1 = new Vector(-NODE_SIZE * 0.5, 0)
                 const p2 = new Vector(NODE_SIZE * 0.5, 0)
@@ -112,17 +112,16 @@ export class Intersection {
                 p2.rotate(d.angle - 90)
                 p1.add(this.node.pos).sub(d.pos.copy().mult(turningDistance))
                 p2.add(this.node.pos).sub(d.pos.copy().mult(turningDistance))
-                this.turning[d.node.id] = { line: new Line(p1.x, p1.y, p2.x, p2.y), node: d.node, edge: d.edge }
+                const turning: Turning = { line: new Line(p1.x, p1.y, p2.x, p2.y), node: d.node, edge: d.edge }
+                this.turns.push(turning)
             })
 
             // check for intersections between turnings, if yes push the enhance turningDistance
             let foundIntersection = false
-            Object.keys(this.turning).forEach(k1 => {
-                Object.keys(this.turning).forEach(k2 => {
-                    const t1 = this.turning[k1].line
-                    const t2 = this.turning[k2].line
+            this.turns.forEach(t1 => {
+                this.turns.forEach(t2 => {
                     if (t1 !== t2) {
-                        const intersection = checkLineIntersection(t1, t2)
+                        const intersection = checkLineIntersection(t1.line, t2.line)
                         if (!foundIntersection) {
                             if (isVector(intersection)) {
                                 foundIntersection = true
@@ -152,13 +151,11 @@ export class Intersection {
             }
         })
         const angleRange = maxAngle - minAngle
-        console.log({ angleRange })
 
         // if its only one node
-        if (Object.keys(this.turning).length < 2 || angleRange < 110) {
-            const turn = this.turning[Object.keys(this.turning)[0]]
-            console.log(turn)
-            this.turning[-1] = {
+        if (this.turns.length < 2 || angleRange < 110) {
+            const turn = this.turns[0]
+            const newTurn: Turning = {
                 node: undefined,
                 edge: undefined,
                 line: {
@@ -166,14 +163,14 @@ export class Intersection {
                     p2: turn.line.p2.copy().sub(this.node.pos).rotate(180).add(this.node.pos),
                 }
             }
+            this.turns.push(newTurn)
         }
 
 
         // close the intersection where no turning exists
         const pointRelations: { v: Vector, turning: Turning, angle: number }[] = [];
         const center = this.node.pos.copy()
-        Object.keys(this.turning).forEach(k => {
-            const t = this.turning[k]
+        this.turns.forEach(t => {
             pointRelations.push({ v: t.line.p1, turning: t, angle: t.line.p1.angleBetween(center) })
             pointRelations.push({ v: t.line.p2, turning: t, angle: t.line.p2.angleBetween(center) })
         })
