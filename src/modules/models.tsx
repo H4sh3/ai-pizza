@@ -112,7 +112,6 @@ export class Node {
         Object.keys(this.connections).forEach(direction => {
             if (this.connections[direction] === edge) {
                 this.connections[direction] = undefined
-                console.log("removed")
             }
         })
     }

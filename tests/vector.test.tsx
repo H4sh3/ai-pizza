@@ -1,3 +1,4 @@
+import { radToDeg } from "../src/etc/math";
 import Vector from "../src/models/vector";
 
 it('vector add', () => {
@@ -127,4 +128,19 @@ it('heading etc', () => {
 
     expect(v1.copy().sub(v).heading()).toBeCloseTo(45)
     expect(v2.copy().sub(v).heading()).toBeCloseTo(-135)
+});
+
+it('angle between vectors', () => {
+    let v2: Vector = new Vector(1, 0)
+    let v1: Vector = new Vector(0, -1)
+
+    const a = Math.atan2(v2.y - v1.y, v2.x - v1.x) * 180 / Math.PI;
+    expect(a).toBe(45)
+
+    //expect(radToDeg(v1.angleBetween(v2))).toBeCloseTo(90)
+
+    expect(radToDeg(Math.PI / 2)).toBe(90)
+    expect(radToDeg(Math.PI)).toBe(180)
+    expect(radToDeg(6 * (Math.PI / 4))).toBe(270)
+    expect(radToDeg(2 * Math.PI)).toBe(360)
 });

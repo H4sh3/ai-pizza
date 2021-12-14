@@ -52,8 +52,6 @@ export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] 
 
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
 const dotsY = Math.floor(HEIGHT / (NODE_SIZE * 2))
-console.log(dotsX)
-console.log(dotsY)
 for (let x = 1; x < dotsX; x++) {
     for (let y = 1; y < dotsY; y++) {
         state.grid.push({ x: x * (WIDTH / dotsX), y: y * (HEIGHT / dotsY) })

@@ -188,7 +188,7 @@ test('transpose matrix - (5, 1) to (1, 5)', () => {
     ]
   })
 })
-    
+
 test('mapping with static map', () => {
   let m = new Matrix(3, 3);
   m.data[0] = [1, 2, 3];
@@ -241,7 +241,7 @@ test('error handling of static subtraction when columns and rows of A don\'t mat
 
   let m1 = new Matrix(1, 2);
   let m2 = new Matrix(3, 4);
-  Matrix.subtract(m1,m2);
+  Matrix.subtract(m1, m2);
 
   //Check if the mock console.log has been called
   expect(global.console.log).toHaveBeenCalledWith('Columns and Rows of A must match Columns and Rows of B.')
@@ -332,7 +332,7 @@ test('instance map with row and column params', () => {
   m.data[1] = [4, 5, 6];
   m.data[2] = [7, 8, 9];
 
-  m.map((e, row, col) => e*100 + row*10 + col);
+  m.map((e, row, col) => e * 100 + row * 10 + col);
 
   expect(m).toEqual({
     rows: 3,
@@ -351,7 +351,7 @@ test('static map with row and column params', () => {
   m.data[1] = [4, 5, 6];
   m.data[2] = [7, 8, 9];
 
-  let mapped = Matrix.map(m, (e, row, col) => e*100 + row*10 + col);
+  let mapped = Matrix.map(m, (e, row, col) => e * 100 + row * 10 + col);
 
   expect(mapped).toEqual({
     rows: 3,

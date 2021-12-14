@@ -40,6 +40,7 @@ const n4 = new NewNode(center.copy().add(new Vector(dist * 1.5, -dist * 1.5)));
 
 const n2 = new NewNode(center.copy().add(new Vector(0, 0)));
 const n3 = new NewNode(center.copy().add(new Vector(0, dist)));
+const n6 = new NewNode(center.copy().add(new Vector(0, -dist * 3)));
 
 
 state.nodes.push(n0)
@@ -48,7 +49,11 @@ state.nodes.push(n2)
 state.nodes.push(n3)
 state.nodes.push(n4)
 state.nodes.push(n5)
+state.nodes.push(n6)
 
+
+connectNodes(state.nodes, state.edges, n5, n6)
+connectNodes(state.nodes, state.edges, n4, n6)
 
 connectNodes(state.nodes, state.edges, n0, n2)
 connectNodes(state.nodes, state.edges, n0, n5)
@@ -59,14 +64,20 @@ connectNodes(state.nodes, state.edges, n1, n4)
 connectNodes(state.nodes, state.edges, n2, n3)
 connectNodes(state.nodes, state.edges, n5, n4)
 
+console.log("0")
 state.intersections.push(new Intersection(n0))
+console.log("1")
 state.intersections.push(new Intersection(n1))
+console.log("2")
 state.intersections.push(new Intersection(n2))
+console.log("3")
 state.intersections.push(new Intersection(n3))
-
+console.log("4")
 state.intersections.push(new Intersection(n4))
+console.log("5")
 state.intersections.push(new Intersection(n5))
-
+console.log("6")
+state.intersections.push(new Intersection(n6))
 
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -89,7 +100,7 @@ const GraphEditor: React.FC = () => {
 
     const onmousedown = () => {
         if (state.nodeMode) {
-            //state.nodes.push(new NewNode(new Vector(state.gridCursor.x, state.gridCursor.y)))
+            state.nodes.push(new NewNode(new Vector(state.gridCursor.x, state.gridCursor.y)))
         } else {
             const node = getNodeAtCursor()
             if (node === undefined) return
@@ -129,7 +140,6 @@ const GraphEditor: React.FC = () => {
             drawGrid(context)
 
             const highlightedNode: NewNode = getNodeAtCursor()
-            //renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
 
             //const lines = state.edges.map(e => getLine(e))
             state.intersections.forEach(intersection => {
@@ -141,7 +151,7 @@ const GraphEditor: React.FC = () => {
             state.intersections.forEach(intersection => {
                 Object.keys(intersection.turning).forEach(k => {
                     // Todo fix this
-                    renderLines([intersection.turning[k]], context, "#0000FF")
+                    //renderLines([intersection.turning[k]], context, "#0000FF")
                 })
             })
 
@@ -149,6 +159,7 @@ const GraphEditor: React.FC = () => {
                 renderLines(intersection.borders, context, "#000000")
             })
 
+            renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
         }
 
         requestAnimationFrame(frame)

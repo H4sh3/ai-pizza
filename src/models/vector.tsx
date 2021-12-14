@@ -68,6 +68,12 @@ export class Vector {
     mag() {
         return Math.sqrt((this.x * this.x) + (this.y * this.y))
     }
+
+    angleBetween(other: Vector) {
+        var dx2 = this.x - other.x;
+        var dy2 = this.y - other.y;
+        return Math.atan2(dy2, dx2);
+    }
 }
 
 export const isVector = (value: any): value is Vector => {
