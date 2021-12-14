@@ -4,7 +4,7 @@ import { renderLines, renderNodes, renderPoint } from "../modules/render"
 import { complexConnect, connectNodes, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
 import { randInt } from "../etc/math"
-import { Intersection } from "../models/city"
+import { City, Intersection } from "../models/city"
 
 const state = {
     nodes: [] as NewNode[],
@@ -17,7 +17,8 @@ const state = {
     res: NODE_SIZE,
     selectedNode: undefined,
     grid: [],
-    intersections: []
+    intersections: [],
+    city: new City()
 }
 
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
@@ -64,20 +65,10 @@ connectNodes(state.nodes, state.edges, n1, n4)
 connectNodes(state.nodes, state.edges, n2, n3)
 connectNodes(state.nodes, state.edges, n5, n4)
 
-console.log("0")
-state.intersections.push(new Intersection(n0))
-console.log("1")
-state.intersections.push(new Intersection(n1))
-console.log("2")
-state.intersections.push(new Intersection(n2))
-console.log("3")
-state.intersections.push(new Intersection(n3))
-console.log("4")
-state.intersections.push(new Intersection(n4))
-console.log("5")
-state.intersections.push(new Intersection(n5))
-console.log("6")
-state.intersections.push(new Intersection(n6))
+state.nodes.forEach(n => {
+    state.city.addIntersection(n)
+})
+state.city.addRoads()
 
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -155,9 +146,14 @@ const GraphEditor: React.FC = () => {
                 })
             })
 
-            state.intersections.forEach(intersection => {
+            state.city.intersections.forEach(intersection => {
                 renderLines(intersection.borders, context, "#000000")
             })
+            renderLines(state.city.roads.reduce((acc, r) => {
+                acc.push(r.line1)
+                acc.push(r.line2)
+                return acc
+            }, []), context, "#000000")
 
             renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
         }

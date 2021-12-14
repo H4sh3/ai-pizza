@@ -3,6 +3,8 @@ import { checkLineIntersection } from "../etc/math";
 import { Line } from "../modules/models";
 import { NewEdge, NewNode } from "./graph"
 import Vector, { isVector } from "./vector";
+import { off } from "process";
+import { updateFunctionTypeNode } from "typescript";
 
 
 interface Direction {
@@ -16,6 +18,61 @@ interface Turning {
     line: Line,
     node: NewNode | undefined,
     edge: NewEdge
+}
+
+export class City {
+    intersections: Intersection[]
+    roads: Road[]
+
+    constructor() {
+        this.intersections = []
+        this.roads = []
+    }
+
+    addIntersection(node) {
+        this.intersections.push(new Intersection(node))
+    }
+
+    addRoads() {
+        const turnings = this.intersections.reduce((acc, i) => {
+            Object.keys(i.turning).forEach(k => {
+                if (i.turning[k].node) {
+                    acc.push(i.turning[k])
+                }
+            })
+            return acc
+        }, [])
+
+        const usedEdges: NewEdge[] = []
+        for (let i = 0; i < turnings.length; i++) {
+            for (let j = 0; j < turnings.length; j++) {
+                const t1: Turning = turnings[i]
+                const t2: Turning = turnings[j]
+                if (t1 === t2) continue
+                if (t1.edge !== t2.edge) continue
+                const edge = t1.edge; // edge between turnings
+                if (usedEdges.includes(edge)) continue
+
+                // same edge
+                this.roads.push({
+                    edge,
+                    line1: new Line(t1.line.p1.x, t1.line.p1.y, t2.line.p2.x, t2.line.p2.y,),
+                    line2: new Line(t1.line.p2.x, t1.line.p2.y, t2.line.p1.x, t2.line.p1.y,),
+                })
+                usedEdges.push(edge)
+            }
+        }
+    }
+}
+
+export class Road {
+    edge: NewEdge
+    line1: Line
+    line2: Line
+
+    constructor() {
+
+    }
 }
 
 export class Intersection {
