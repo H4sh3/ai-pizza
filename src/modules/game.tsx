@@ -5,12 +5,13 @@ import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
 import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
 import { addEdge } from "./maps/trainingsEnv"
-import generateRandomTrainingsMap, { shuffle } from "./maps/trainingsGeneration"
-import { randInt } from "./math"
+import generateRandomTrainingsMap from "./maps/trainingsGeneration"
 import { PretrainedModel2 } from "./model"
-import { Edge, Line, Node, Vector } from "./models"
+import { Edge, Line, Node } from "./models"
 import deser from "./maps/scquareCity"
 import Shop from "./shop"
+import { randInt } from "../etc/math"
+import Vector from "../models/vector"
 
 export class Game {
     width: number
