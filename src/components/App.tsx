@@ -8,7 +8,7 @@ import MapEditor from "./MapEditor";
 
 class App extends React.Component<Record<string, unknown>, undefined> {
   public render() {
-    return <GraphEditor />
+    return <GameUI />
   }
 }
 

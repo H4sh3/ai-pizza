@@ -42,12 +42,12 @@ export class Line {
 }
 
 
-export class Edge {
+export class OldEdge {
     id: number
-    startNode: Node
-    endNode: Node
+    startNode: OldNode
+    endNode: OldNode
 
-    constructor(start: Node, end: Node, id: number) {
+    constructor(start: OldNode, end: OldNode, id: number) {
         this.startNode = start
         this.endNode = end
         this.id = id
@@ -82,15 +82,15 @@ export enum Direction {
     down
 }
 
-export class Node {
+export class OldNode {
     id: number
     color: string
     pos: Vector
     connections: {
-        left: Edge | undefined,
-        right: Edge | undefined
-        top: Edge | undefined,
-        bottom: Edge | undefined
+        left: OldEdge | undefined,
+        right: OldEdge | undefined
+        top: OldEdge | undefined,
+        bottom: OldEdge | undefined
     }
     lines: { line: Line, id: number }[]
     edgeIds: number[]
@@ -108,7 +108,7 @@ export class Node {
         this.lines = [];
     }
 
-    removeEdge(edge: Edge) {
+    removeEdge(edge: OldEdge) {
         Object.keys(this.connections).forEach(direction => {
             if (this.connections[direction] === edge) {
                 this.connections[direction] = undefined
@@ -135,7 +135,7 @@ export class Node {
         return directions
     }
 
-    getNeightbours(): Node[] {
+    getNeighbours(): Node[] {
         const n = []
         Object.keys(this.connections).forEach(direction => {
             if (this.connections[direction] !== undefined) {
@@ -149,8 +149,8 @@ export class Node {
         return n
     }
 
-    getEdges(): Edge[] {
-        const x: Edge[] = []
+    getEdges(): OldEdge[] {
+        const x: OldEdge[] = []
         Object.keys(this.connections).map(k => {
             if (this.connections[k] != undefined) {
                 x.push(this.connections[k])

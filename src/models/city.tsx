@@ -1,17 +1,20 @@
 import { NODE_SIZE } from "../modules/const";
 import { checkLineIntersection } from "../etc/math";
 import { Line } from "../modules/models";
-import { NewEdge, NewNode } from "./graph"
+import { Edge, Node } from "./graph"
 import Vector, { isVector } from "./vector";
+import { textChangeRangeIsUnchanged } from "typescript";
 
 
 export class City {
     intersections: Intersection[]
     roads: Road[]
+    turnSize: number
 
     constructor() {
         this.intersections = []
         this.roads = []
+        this.turnSize = NODE_SIZE
     }
 
     addIntersection(node) {
@@ -28,7 +31,7 @@ export class City {
             return acc
         }, [])
 
-        const usedEdges: NewEdge[] = []
+        const usedEdges: Edge[] = []
         for (let i = 0; i < turnings.length; i++) {
             for (let j = 0; j < turnings.length; j++) {
                 const t1: Turn = turnings[i]
@@ -48,10 +51,23 @@ export class City {
             }
         }
     }
+
+    getIntersection(node: Node): Intersection {
+        return this.intersections.find(i => i.node === node)
+    }
+
+    borders() {
+        const x = this.intersections.reduce((acc, i) => { return acc.concat(i.borders) }, [])
+        this.roads.forEach(r => {
+            x.push(r.line1)
+            x.push(r.line2)
+        })
+        return x
+    }
 }
 
 export class Road {
-    edge: NewEdge
+    edge: Edge
     line1: Line
     line2: Line
 
@@ -62,15 +78,15 @@ export class Road {
 
 export interface Turn {
     pos: Vector,
-    node: NewNode,
-    edge: NewEdge,
+    node: Node,
+    edge: Edge,
     distToNode: number,
     line?: Line,
 }
 
 export const getTurns = (node): Turn[] => {
     return node.edges.map(e => {
-        const distToNode = 15
+        const distToNode = 35
         const other = e.getOther(node)
         let pos = other.pos.copy().sub(node.pos.copy()).normalize()
 
@@ -84,9 +100,9 @@ export const getTurns = (node): Turn[] => {
     })
 }
 
-const addLine = (turn: Turn, node: NewNode) => {
-    const p1 = new Vector(-NODE_SIZE * 0.5, 0)
-    const p2 = new Vector(NODE_SIZE * 0.5, 0)
+const addLine = (turn: Turn, node: Node, turnSize: number) => {
+    const p1 = new Vector(-turnSize, 0)
+    const p2 = new Vector(turnSize * 0.5, 0)
     p1.rotate(turn.pos.heading() - 90)
     p2.rotate(turn.pos.heading() - 90)
     p1.add(node.pos).add(turn.pos.copy().mult(turn.distToNode))
@@ -96,14 +112,16 @@ const addLine = (turn: Turn, node: NewNode) => {
 }
 
 export class Intersection {
-    node: NewNode
+    node: Node
     turns: Turn[]
     borders: Line[]
+    turnSize: number
 
-    constructor(node: NewNode) {
+    constructor(node: Node) {
         this.borders = []
         this.node = node
         this.turns = getTurns(this.node)
+        this.turnSize = NODE_SIZE
         spreadVectors(this.turns)
 
         let noIntersections = false
@@ -112,7 +130,7 @@ export class Intersection {
         while (!noIntersections && limit > 0) {
             noIntersections = true
             this.turns.map(t => {
-                return addLine(t, this.node)
+                return addLine(t, this.node, this.turnSize)
             })
 
             // check for intersections between turnings, if yes push the enhance turningDistance
@@ -127,7 +145,7 @@ export class Intersection {
                         if (isVector(intersection)) {
                             this.turns.forEach(t => {
                                 t.distToNode += 5
-                                t = addLine(t, this.node)
+                                t = addLine(t, this.node, this.turnSize)
                             })
 
                             broke = true
@@ -194,7 +212,7 @@ export const calculateCenter = (points: Vector[]): Vector => {
 
 export const spreadVectors = (turns: Turn[]) => {
     turns.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
-    const minAngle = 25
+    const minAngle = 35
     let enoughSpread = minAngleBetweenVectors(turns.map(t => t.pos), minAngle)
     let max = 500
     while (!enoughSpread && max > 0) {
@@ -226,10 +244,7 @@ export const spreadVectors = (turns: Turn[]) => {
 
 export const calcAngleRange = (turns: Turn[]) => {
     const x = turns.filter(t => t.edge !== undefined)
-    x.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
-    const min = x[0].pos.heading()
-    const max = x[x.length - 1].pos.heading()
-    return max - min
+    return x.reduce((acc, t) => { return acc.add(t.pos.normalize()) }, new Vector(0, 0)).mag()
 }
 
 const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
@@ -244,9 +259,9 @@ const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
 }
 
 
-const handleSmallTurns = (turns: Turn[], node: NewNode) => {
+const handleSmallTurns = (turns: Turn[], node: Node) => {
     const angleRange = calcAngleRange(turns)
-    if (angleRange < 130) {
+    if (angleRange > 0.5) {
         const turn = turns[0]
         const newTurn: Turn = {
             pos: undefined,

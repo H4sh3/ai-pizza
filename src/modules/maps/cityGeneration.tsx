@@ -63,7 +63,7 @@ const checkGraphes = (nodes: Node[]) => {
     const visited = []
 
     const followGraph = (startId: number, node: Node, visited: Node[]) => {
-        node.getNeightbours().forEach(next => {
+        node.getNeighbours().forEach(next => {
             visited.push(node)
             graphs[startId].push(node)
             if (!visited.includes(next)) {
@@ -89,7 +89,7 @@ const checkGraphes = (nodes: Node[]) => {
     Object.keys(graphs).forEach(k => {
         if (graphs[k].length > 1) return
 
-        if (graphs[k][0].getNeightbours().length != 0) {
+        if (graphs[k][0].getNeighbours().length != 0) {
             toRemove.push(k)
         }
     })

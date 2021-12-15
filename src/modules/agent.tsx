@@ -1,8 +1,8 @@
-import { map } from "./math";
+import { map } from "../etc/math";
 import { Line } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
 import { Node } from './models'
-import { randInt } from "./math";
+import { randInt } from "../etc/math";
 import Vector from "../models/vector";
 
 export interface AgentSettings {

@@ -37,7 +37,7 @@ class Shop {
         const startNode = this.edgeBuild.startNode
         this.edgeBuild.validSecondNodes = this.edgeBuild.validSecondNodes = nodes
             .filter(n => n !== startNode)
-            .filter(n => !startNode.getNeightbours().includes(n))
+            .filter(n => !startNode.getNeighbours().includes(n))
             .filter(n => n.pos.dist(startNode.pos) === NODE_SIZE * 3)
     }
 }

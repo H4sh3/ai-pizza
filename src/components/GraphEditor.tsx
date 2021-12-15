@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns } from "../modules/render"
-import { complexConnect, NewEdge, NewNode } from "../models/graph"
+import { renderIntersections, renderLines, renderNodes } from "../modules/render"
+import { complexConnect, Edge, Node } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
 
 const state = {
-    nodes: [] as NewNode[],
-    edges: [] as NewEdge[],
+    nodes: [] as Node[],
+    edges: [] as Edge[],
     nodeMode: false,
     gridCursor: {
         x: 0,
@@ -25,6 +25,37 @@ const state = {
     vectors: []
 }
 
+export const createRoundMap = (): { nodes: Node[], edges: Edge[] } => {
+    const edges: Edge[] = [];
+    const nodes: Node[] = [];
+    const center = new Vector(WIDTH / 2, HEIGHT / 2);
+
+    const step = NODE_SIZE * 3
+    const n1 = new Node(center.copy().add(new Vector(0, 0)));
+    nodes.push(n1)
+
+    const radius = 5
+    const numNodes = 6
+    const stepSize = 360 / numNodes
+
+    let prev = new Node(center.copy().add(new Vector(step * radius, 0).rotate(0 * stepSize)));
+    nodes.push(prev)
+    complexConnect(nodes, state.edges, prev, n1)
+
+    for (let i = 1; i < numNodes; i++) {
+        const newNode = new Node(center.copy().add(new Vector(step * radius, 0).rotate(i * stepSize)));
+        nodes.push(newNode)
+        complexConnect(nodes, state.edges, newNode, n1)
+        complexConnect(nodes, state.edges, prev, newNode)
+        prev = newNode
+    }
+
+    complexConnect(nodes, edges, nodes[1], nodes[nodes.length - 1])
+    return { nodes, edges }
+}
+
+state.nodes = createRoundMap().nodes
+
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
 const dotsY = Math.floor(HEIGHT / (NODE_SIZE * 2))
 for (let x = 1; x < dotsX; x++) {
@@ -32,31 +63,6 @@ for (let x = 1; x < dotsX; x++) {
         state.grid.push({ x: x * (WIDTH / dotsX), y: y * (HEIGHT / dotsY) })
     }
 }
-
-const center = new Vector(WIDTH / 2, HEIGHT / 2);
-
-const step = NODE_SIZE * 3
-const n1 = new NewNode(center.copy().add(new Vector(0, 0)));
-state.nodes.push(n1)
-
-const radius = 6
-const nodes = 13
-const stepSize = 360 / nodes
-
-let prev = new NewNode(center.copy().add(new Vector(step * radius, 0).rotate(0 * stepSize)));
-state.nodes.push(prev)
-complexConnect(state.nodes, state.edges, prev, n1)
-
-for (let i = 1; i < nodes; i++) {
-    const newNode = new NewNode(center.copy().add(new Vector(step * radius, 0).rotate(i * stepSize)));
-    state.nodes.push(newNode)
-    complexConnect(state.nodes, state.edges, newNode, n1)
-    complexConnect(state.nodes, state.edges, prev, newNode)
-    prev = newNode
-}
-
-complexConnect(state.nodes, state.edges, state.nodes[1], state.nodes[state.nodes.length - 1])
-
 
 const nodeCnt = {}
 state.nodes.forEach(n1 => {
@@ -107,7 +113,7 @@ const GraphEditor: React.FC = () => {
 
     const onmousedown = () => {
         if (state.nodeMode) {
-            state.nodes.push(new NewNode(new Vector(state.mouseCursor.x, state.mouseCursor.y)))
+            state.nodes.push(new Node(new Vector(state.mouseCursor.x, state.mouseCursor.y)))
         } else {
             const node = getNodeAtCursor()
             if (node === undefined) return

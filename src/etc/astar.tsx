@@ -1,13 +1,14 @@
 
 // a start
 
+import { NewNode } from "../models/graph"
 import { Node } from "../modules/models"
 import priorityQueue from "./prioQueue"
 
-const search = (nodes: Node[], start: Node, end: Node): Node[] => {
-    let x: Node[] = []
+const search = (nodes: NewNode[], start: NewNode, end: NewNode): NewNode[] => {
+    let x: NewNode[] = []
 
-    const openList = priorityQueue<Node>()
+    const openList = priorityQueue<NewNode>()
     openList.put(start, 0)
 
     const closeList = {}
@@ -25,7 +26,7 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
             break
         }
 
-        current.getNeightbours().forEach(neighbour => {
+        current.edges.map(e => e.getOther(current)).forEach(neighbour => {
             if (closeList[neighbour.id]) return // checked already
             const newCost: number = closeList[current.id] + current.pos.dist(neighbour.pos)
             closeList[neighbour.id] = newCost
@@ -33,12 +34,6 @@ const search = (nodes: Node[], start: Node, end: Node): Node[] => {
             openList.put(neighbour, newCost)
         });
     }
-
-//    const all = []
-//    Object.keys(prevNode).forEach(k => {
-//        all.push(prevNode[k])
-//    })
-//    return all
 
     const route = [end]
     try {

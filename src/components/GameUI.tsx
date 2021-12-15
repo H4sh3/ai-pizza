@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { allowedNeighbours, GAME_DURATION, HEIGHT, nodeSelectionRange, NODE_SIZE, SCORE_HEIGHT, SCORE_WIDTH, WIDTH } from "../modules/const"
-import { Line, Node, Vector } from "../modules/models"
+import { Line } from "../modules/models"
 import Agent from "../modules/agent"
 import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts, renderIntersections } from "../modules/render"
 import Game from "../modules/game"
-import { map } from "../modules/math"
+import { map } from "../etc/math"
+import Vector from "../models/vector"
+import { Node } from "../models/graph"
 
 const game = new Game(WIDTH, HEIGHT)
 const mouse = {
@@ -102,13 +104,13 @@ const GameUI: React.FC = () => {
             // used when the user picks first station
             if (game.gameState.pickingFirstNode) {
                 const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
-                renderNodes(game.nodes.filter(n => n.getNeightbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
+                renderNodes(game.nodes.filter(n => n.getNeighbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
             }
 
             if (game.shop.edgeBuild.active) {
                 if (game.shop.edgeBuild.startNode === undefined) {
                     const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
-                    renderNodes(game.nodes.filter(n => n.getNeightbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
+                    renderNodes(game.nodes.filter(n => n.getNeighbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
                 }
             }
 
@@ -120,13 +122,24 @@ const GameUI: React.FC = () => {
 
             renderLines(game.roads, context, "#FFFFFF")
 
-            // renderLines(game.intersections, context, "#FF0000")
+            renderIntersections(game.city.intersections, context, "#FF0000")
 
             if (game.gameState.running) {
                 renderPizzaAnimations(game.pizzaAnimation, context)
                 renderProfitTexts(game.scrollingTexts, context)
                 game.step()
             }
+
+            // new stuff 
+            game.city.intersections.forEach(intersection => {
+                renderLines(intersection.borders, context, "#0000FF")
+            })
+
+            renderLines(game.city.roads.reduce((acc, r) => {
+                acc.push(r.line1)
+                acc.push(r.line2)
+                return acc
+            }, []), context, "#0000FF")
         }
 
         requestAnimationFrame(frame)

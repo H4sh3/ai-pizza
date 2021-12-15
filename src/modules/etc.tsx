@@ -2,10 +2,13 @@ import search from "../etc/astar"
 import Agent, { Sensor, SensorSettings } from "./agent"
 import { NODE_SIZE } from "./const"
 import { checkLineIntersection, map } from "../etc/math"
-import { Line, Node } from "./models"
 import Vector, { isVector } from "../models/vector"
+import { Node } from "../models/graph"
+import { Line, OldNode } from "./models"
+import { check } from "prettier"
+import { City } from "../models/city"
 
-export const getCheckpoints = (path: Node[]): Line[] => {
+export const getCheckpointsOld = (path: OldNode[]): Line[] => {
     // generates checkpoints for a list of nodes
     // checkpoint direction depends on the following node
     // this way a route of checkpoints is generated that the agent follows
@@ -23,6 +26,23 @@ export const getCheckpoints = (path: Node[]): Line[] => {
             }
         })
     }
+    return checkpoints
+}
+
+export const getCheckpoints = (route: Node[], city: City) => {
+    const checkpoints = []
+    for (let i = 1; i < route.length; i++) {
+        const n1 = route[i - 1]
+        const n2 = route[i]
+
+        const inter = city.getIntersection(n1)
+        const line = inter.turns.find(t => t.node === n2).line
+        checkpoints.push(line)
+    }
+    const inter = city.getIntersection(route[route.length - 1])
+    route[route.length - 2]
+    const line = inter.turns.find(t => t.node === route[route.length - 2]).line
+    checkpoints.push(line)
     return checkpoints
 }
 
@@ -118,18 +138,7 @@ export const handleCheckpoints = (agent: Agent, body: Line[], checkpoints: Line[
 }
 
 export const directionOfNodes = (n1: Node, n2: Node): Vector => {
-    let x = 0
-    let y = 0
-    if (n1.connections.left !== undefined && n1.connections.left.getOther(n1.id).id === n2.id) {
-        x = -1
-    } else if (n1.connections.right !== undefined && n1.connections.right.getOther(n1.id).id === n2.id) {
-        x = 1
-    } else if (n1.connections.top !== undefined && n1.connections.top.getOther(n1.id).id === n2.id) {
-        y = -1
-    } else if (n1.connections.bottom !== undefined && n1.connections.bottom.getOther(n1.id).id === n2.id) {
-        y = 1
-    }
-    return new Vector(x, y)
+    return n1.pos.copy().sub(n2.pos).normalize().rotate(180)
 }
 
 export const getAllRoutesDict = (nodes: Node[]) => {
@@ -155,5 +164,4 @@ export const getAllRoutesDict = (nodes: Node[]) => {
     sorted.sort((a, b) => a.l > b.l ? -1 : 0)
 
     return sorted;
-
 }
