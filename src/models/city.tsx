@@ -60,7 +60,7 @@ export class Road {
     }
 }
 
-interface Turn {
+export interface Turn {
     pos: Vector,
     node: NewNode,
     edge: NewEdge,
@@ -87,7 +87,6 @@ export const getTurns = (node): Turn[] => {
 const addLine = (turn: Turn, node: NewNode) => {
     const p1 = new Vector(-NODE_SIZE * 0.5, 0)
     const p2 = new Vector(NODE_SIZE * 0.5, 0)
-    // console.log(t.heading)
     p1.rotate(turn.pos.heading() - 90)
     p2.rotate(turn.pos.heading() - 90)
     p1.add(node.pos).add(turn.pos.copy().mult(turn.distToNode))
@@ -225,18 +224,12 @@ export const spreadVectors = (turns: Turn[]) => {
     return turns
 }
 
-const calcAngleRange = (turns: Turn[]) => {
-    let minAngle = Infinity
-    let maxAngle = 0
-    turns.forEach(d => {
-        if (Math.abs(d.pos.heading()) < minAngle) {
-            minAngle = Math.abs(d.pos.heading())
-        }
-        if (Math.abs(d.pos.heading()) > maxAngle) {
-            maxAngle = Math.abs(d.pos.heading())
-        }
-    })
-    return maxAngle - minAngle
+export const calcAngleRange = (turns: Turn[]) => {
+    const x = turns.filter(t => t.edge !== undefined)
+    x.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
+    const min = x[0].pos.heading()
+    const max = x[x.length - 1].pos.heading()
+    return max - min
 }
 
 const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
@@ -253,7 +246,7 @@ const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
 
 const handleSmallTurns = (turns: Turn[], node: NewNode) => {
     const angleRange = calcAngleRange(turns)
-    if (turns.length < 2 && angleRange < 110) {
+    if (angleRange < 130) {
         const turn = turns[0]
         const newTurn: Turn = {
             pos: undefined,

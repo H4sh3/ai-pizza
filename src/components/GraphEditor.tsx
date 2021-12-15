@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { renderLines, renderNodes, renderPoint } from "../modules/render"
+import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns } from "../modules/render"
 import { complexConnect, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
@@ -10,6 +10,10 @@ const state = {
     edges: [] as NewEdge[],
     nodeMode: false,
     gridCursor: {
+        x: 0,
+        y: 0,
+    },
+    mouseCursor: {
         x: 0,
         y: 0,
     },
@@ -35,9 +39,7 @@ const step = NODE_SIZE * 3
 const n1 = new NewNode(center.copy().add(new Vector(0, 0)));
 state.nodes.push(n1)
 
-
 const radius = 6
-
 const nodes = 13
 const stepSize = 360 / nodes
 
@@ -54,6 +56,7 @@ for (let i = 1; i < nodes; i++) {
 }
 
 complexConnect(state.nodes, state.edges, state.nodes[1], state.nodes[state.nodes.length - 1])
+
 
 const nodeCnt = {}
 state.nodes.forEach(n1 => {
@@ -98,11 +101,13 @@ const GraphEditor: React.FC = () => {
     const onmousemove = (e) => {
         state.gridCursor.x = Math.round((e.clientX) / (WIDTH / dotsX)) * (WIDTH / dotsX)
         state.gridCursor.y = Math.round((e.clientY) / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
+        state.mouseCursor.x = e.clientX
+        state.mouseCursor.y = e.clientY
     }
 
     const onmousedown = () => {
         if (state.nodeMode) {
-            state.nodes.push(new NewNode(new Vector(state.gridCursor.x, state.gridCursor.y)))
+            state.nodes.push(new NewNode(new Vector(state.mouseCursor.x, state.mouseCursor.y)))
         } else {
             const node = getNodeAtCursor()
             if (node === undefined) return
@@ -134,30 +139,8 @@ const GraphEditor: React.FC = () => {
             lastTime = time
             background(context)
 
-
-            // grid cursor 
-            /*             context.beginPath();
-                        context.arc(state.gridCursor.x, state.gridCursor.y, 5, 0, 2 * Math.PI);
-                        context.stroke();
-                        context.fill();
-                        context.closePath() */
-
-            /*             state.city.intersections.map(i => {
-                            i.turns.filter(t => t.node !== undefined).map(t => {
-                                const p = t.pos.copy().mult(-50).add(i.node.pos)
-                                context.beginPath();
-                                context.arc(p.x, p.y, 5, 0, 2 * Math.PI);
-                                context.fillStyle = "#FFFF00"
-                                context.stroke();
-                                context.fill();
-                                context.closePath()
-                            })
-                        }) */
-
-            // drawGrid(context)
-
-
-            renderNodes(state.city.intersections.map(i => i.node), context, "#BBBBBB", getNodeAtCursor())
+            renderNodes(state.nodes, context, "#BBBBBB", getNodeAtCursor())
+            renderIntersections(state.city.intersections, context, "#BBBBBB", getNodeAtCursor())
 
             state.city.intersections.forEach(intersection => {
                 renderLines(intersection.borders, context, "#0000FF")
@@ -207,7 +190,7 @@ const GraphEditor: React.FC = () => {
 }
 
 const getNodeAtCursor = () => {
-    return state.nodes.find(n => n.pos.copy().dist(new Vector(state.gridCursor.x, state.gridCursor.y)) < nodeSelectionRange)
+    return state.nodes.find(n => n.pos.copy().dist(new Vector(state.mouseCursor.x, state.mouseCursor.y)) < nodeSelectionRange)
 }
 
 const drawGrid = (context) => {

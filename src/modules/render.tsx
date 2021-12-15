@@ -5,6 +5,7 @@ import { degToRad } from "../etc/math";
 import { Node, Line } from "./models";
 import Vector from "../models/vector";
 import { NewNode } from "../models/graph";
+import { calcAngleRange, Intersection, Turn } from "../models/city";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
@@ -44,6 +45,29 @@ export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, h
         // context.fillText(i, n.pos.x, n.pos.y);
     })
 }
+
+
+export const renderIntersections = (intersections: Intersection[], context, color: string, highlightedNode: Node | NewNode | undefined = undefined) => {
+    intersections.forEach((n, i) => {
+
+        context.fillStyle = color
+        context.strokeStyle = color
+
+        context.beginPath();
+        context.arc(n.node.pos.x, n.node.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
+        context.stroke();
+        context.fill();
+
+
+        context.fillStyle = "#000000"
+        context.strokeStyle = "#000000"
+        context.font = "22px Comic Bold";
+        if (n.turns.length > 0) {
+            context.fillText(Math.floor(calcAngleRange(n.turns)), n.node.pos.x + 5, n.node.pos.y - 5);
+        }
+    })
+}
+
 export const renderPoint = (v: Vector, context, color: string) => {
     context.fillStyle = color
     context.strokeStyle = color
@@ -116,13 +140,5 @@ export const renderCrashed = (crashed: Agent[], context) => {
         context.rotate(degToRad(a.dir.heading()))
         context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
         context.restore()
-    })
-}
-
-
-export const renderIntersections = (intersections: Vector[], context) => {
-    intersections.forEach(i => {
-        context.fillStyle = "#FF0000"
-        context.fillRect(i.x, i.y, 5, 5)
     })
 }
