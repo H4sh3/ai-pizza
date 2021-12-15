@@ -8,7 +8,6 @@ import { NewNode } from "../models/graph";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
-    context.fillStyle = color
     lines.forEach((l, i) => {
         context.beginPath();
         context.moveTo(l.p1.x, l.p1.y);
@@ -19,7 +18,6 @@ export const renderLines = (lines: Line[], context, color, withArc: boolean = fa
         context.stroke();
 
         context.fillStyle = "#000000"
-        context.strokeStyle = "#000000"
         context.font = "22px Comic Bold";
         //context.fillText(i, (l.p1.x + l.p2.x) / 2, (l.p1.y + l.p2.y) / 2);
     })

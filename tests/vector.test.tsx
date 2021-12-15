@@ -144,3 +144,13 @@ it('angle between vectors', () => {
     expect(radToDeg(6 * (Math.PI / 4))).toBe(270)
     expect(radToDeg(2 * Math.PI)).toBe(360)
 });
+
+it('angle between vectors', () => {
+    const vector = new Vector(1, 0)
+    vector.rotate(-179)
+    console.log(vector.heading())
+    vector.rotate(-2)
+    console.log(vector.heading())
+    vector.rotate(-2)
+})
+

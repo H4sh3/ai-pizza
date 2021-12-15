@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
 import { renderLines, renderNodes, renderPoint } from "../modules/render"
-import { complexConnect, connectNodes, NewEdge, NewNode } from "../models/graph"
+import { complexConnect, NewEdge, NewNode } from "../models/graph"
 import Vector from "../models/vector"
-import { randInt } from "../etc/math"
-import { City, Intersection } from "../models/city"
-import { Node } from "../modules/models"
+import { City } from "../models/city"
 
 const state = {
     nodes: [] as NewNode[],
@@ -19,7 +17,8 @@ const state = {
     selectedNode: undefined,
     grid: [],
     intersections: [],
-    city: new City()
+    city: new City(),
+    vectors: []
 }
 
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
@@ -32,43 +31,34 @@ for (let x = 1; x < dotsX; x++) {
 
 const center = new Vector(WIDTH / 2, HEIGHT / 2);
 
-const dist = NODE_SIZE * 8
-
-const n0 = new NewNode(center.copy().add(new Vector(-dist, dist / 4)));
-const n1 = new NewNode(center.copy().add(new Vector(dist, 0)));
-const n2 = new NewNode(center.copy().add(new Vector(-dist, -dist / 4)));
-/*
-const n5 = new NewNode(center.copy().add(new Vector(-dist * 1.5, -dist * 1.5)));
-
-const n4 = new NewNode(center.copy().add(new Vector(dist * 1.5, -dist * 1.5)));
-
-const n3 = new NewNode(center.copy().add(new Vector(0, dist)));
-const n6 = new NewNode(center.copy().add(new Vector(0, -dist * 3)));
- */
-
-state.nodes.push(n0)
+const step = NODE_SIZE * 3
+const n1 = new NewNode(center.copy().add(new Vector(0, 0)));
 state.nodes.push(n1)
-state.nodes.push(n2)/* 
-state.nodes.push(n3)
-state.nodes.push(n4)
-state.nodes.push(n5)
-state.nodes.push(n6) */
 
 
-complexConnect(state.nodes, state.edges, n0, n1)
-complexConnect(state.nodes, state.edges, n2, n1)
-/* complexConnect(state.nodes, state.edges, n0, n2)
-complexConnect(state.nodes, state.edges, n0, n5)
-complexConnect(state.nodes, state.edges, n1, n2)
-complexConnect(state.nodes, state.edges, n1, n4)
-complexConnect(state.nodes, state.edges, n2, n3)
-complexConnect(state.nodes, state.edges, n5, n4) */
+const radius = 6
 
+const nodes = 14
+const stepSize = 360 / nodes
+
+let prev = new NewNode(center.copy().add(new Vector(step * radius, 0).rotate(0 * stepSize)));
+state.nodes.push(prev)
+complexConnect(state.nodes, state.edges, prev, n1)
+
+for (let i = 1; i < nodes; i++) {
+    const newNode = new NewNode(center.copy().add(new Vector(step * radius, 0).rotate(i * stepSize)));
+    state.nodes.push(newNode)
+    complexConnect(state.nodes, state.edges, newNode, n1)
+    complexConnect(state.nodes, state.edges, prev, newNode)
+    prev = newNode
+}
+
+complexConnect(state.nodes, state.edges, state.nodes[1], state.nodes[state.nodes.length - 1])
 
 const nodeCnt = {}
 state.nodes.forEach(n1 => {
     state.nodes.forEach(n2 => {
-        console.log("conect!")
+        // console.log("conect!")
         if (nodeCnt[n2.id] == undefined || nodeCnt[n2.id] < 2) {
             // complexConnect(state.nodes, state.edges, n1, n2)
             if (n1.id in nodeCnt) {
@@ -85,7 +75,8 @@ state.nodes.forEach(n1 => {
     })
 })
 
-state.nodes.forEach(n => {
+state.nodes.forEach((n, i) => {
+    // console.log(i)
     state.city.addIntersection(n)
 })
 state.city.addRoads()
@@ -155,6 +146,30 @@ const GraphEditor: React.FC = () => {
             context.fill();
             context.closePath()
 
+            state.city.intersections.map(i => {
+                i.turns.filter(t => t.node !== undefined).map(t => {
+                    const p = t.pos.copy().mult(-50).add(i.node.pos)
+                    context.beginPath();
+                    context.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+                    context.fillStyle = "#FFFF00"
+                    context.stroke();
+                    context.fill();
+                    context.closePath()
+                })
+            })
+
+            const center = new Vector(WIDTH / 2, HEIGHT / 2)
+            state.vectors.forEach(v => {
+                context.save()
+                context.beginPath();
+                context.moveTo(center.x, center.y);
+                const t = center.copy().add(v)
+                context.lineTo(t.x, t.y);
+                context.stroke();
+                context.restore()
+            })
+
+
             drawGrid(context)
 
             const highlightedNode: NewNode = getNodeAtCursor()
@@ -174,13 +189,14 @@ const GraphEditor: React.FC = () => {
             })
 
             state.city.intersections.forEach(intersection => {
-                renderLines(intersection.borders, context, "#000000")
+                renderLines(intersection.borders, context, "#0000FF")
             })
+
             renderLines(state.city.roads.reduce((acc, r) => {
                 acc.push(r.line1)
                 acc.push(r.line2)
                 return acc
-            }, []), context, "#000000")
+            }, []), context, "#FF0000")
 
             renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
         }
@@ -216,23 +232,6 @@ const GraphEditor: React.FC = () => {
                 }>
                 Delete last node
             </Button>
-
-            <Button
-                onClick={
-                    () => {
-                        const other = state.nodes[randInt(0, state.nodes.length - 1)]
-                        const n = new NewNode(new Vector(randInt(0, WIDTH), randInt(0, HEIGHT)))
-                        if (state.nodes.find(x => x.pos.dist(n.pos) < NODE_SIZE * 2)) {
-                            return
-                        }
-                        state.nodes.push(n)
-                        state.edges = complexConnect(state.nodes, state.edges, n, other)
-                        RERENDER()
-                    }
-                }>
-                WOW!
-            </Button>
-
         </div>
     </div >
 }
