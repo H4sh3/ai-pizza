@@ -70,7 +70,7 @@ interface Turn {
 
 export const getTurns = (node): Turn[] => {
     return node.edges.map(e => {
-        const distToNode = 25
+        const distToNode = 15
         const other = e.getOther(node)
         let pos = other.pos.copy().sub(node.pos.copy()).normalize()
 

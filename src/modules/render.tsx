@@ -41,7 +41,7 @@ export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, h
         context.fillStyle = "#000000"
         context.strokeStyle = "#000000"
         context.font = "22px Comic Bold";
-        context.fillText(i, n.pos.x, n.pos.y);
+        // context.fillText(i, n.pos.x, n.pos.y);
     })
 }
 export const renderPoint = (v: Vector, context, color: string) => {

@@ -38,7 +38,7 @@ state.nodes.push(n1)
 
 const radius = 6
 
-const nodes = 14
+const nodes = 13
 const stepSize = 360 / nodes
 
 let prev = new NewNode(center.copy().add(new Vector(step * radius, 0).rotate(0 * stepSize)));
@@ -131,62 +131,33 @@ const GraphEditor: React.FC = () => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
             if (timeDelta < 1000 / 30) return
-            context.fillStyle = "rgba(160, 160, 160,10)";
-            context.fillRect(0, 0, WIDTH, HEIGHT)
-
-            context.fillStyle = "rgba(250, 250, 0,10)";
-            context.fillRect(state.gridCursor.x, state.gridCursor.y, 3, 3)
-
             lastTime = time
+            background(context)
+
 
             // grid cursor 
-            context.beginPath();
-            context.arc(state.gridCursor.x, state.gridCursor.y, 5, 0, 2 * Math.PI);
-            context.stroke();
-            context.fill();
-            context.closePath()
+            /*             context.beginPath();
+                        context.arc(state.gridCursor.x, state.gridCursor.y, 5, 0, 2 * Math.PI);
+                        context.stroke();
+                        context.fill();
+                        context.closePath() */
 
-            state.city.intersections.map(i => {
-                i.turns.filter(t => t.node !== undefined).map(t => {
-                    const p = t.pos.copy().mult(-50).add(i.node.pos)
-                    context.beginPath();
-                    context.arc(p.x, p.y, 5, 0, 2 * Math.PI);
-                    context.fillStyle = "#FFFF00"
-                    context.stroke();
-                    context.fill();
-                    context.closePath()
-                })
-            })
+            /*             state.city.intersections.map(i => {
+                            i.turns.filter(t => t.node !== undefined).map(t => {
+                                const p = t.pos.copy().mult(-50).add(i.node.pos)
+                                context.beginPath();
+                                context.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+                                context.fillStyle = "#FFFF00"
+                                context.stroke();
+                                context.fill();
+                                context.closePath()
+                            })
+                        }) */
 
-            const center = new Vector(WIDTH / 2, HEIGHT / 2)
-            state.vectors.forEach(v => {
-                context.save()
-                context.beginPath();
-                context.moveTo(center.x, center.y);
-                const t = center.copy().add(v)
-                context.lineTo(t.x, t.y);
-                context.stroke();
-                context.restore()
-            })
+            // drawGrid(context)
 
 
-            drawGrid(context)
-
-            const highlightedNode: NewNode = getNodeAtCursor()
-
-            //const lines = state.edges.map(e => getLine(e))
-            state.intersections.forEach(intersection => {
-                intersection.directions.forEach(d => {
-                    renderPoint(intersection.node.pos.copy().sub(d.pos), context, "#FFFFFF")
-                })
-            })
-
-            state.intersections.forEach(intersection => {
-                Object.keys(intersection.turning).forEach(k => {
-                    // Todo fix this
-                    //renderLines([intersection.turning[k]], context, "#0000FF")
-                })
-            })
+            renderNodes(state.city.intersections.map(i => i.node), context, "#BBBBBB", getNodeAtCursor())
 
             state.city.intersections.forEach(intersection => {
                 renderLines(intersection.borders, context, "#0000FF")
@@ -196,9 +167,8 @@ const GraphEditor: React.FC = () => {
                 acc.push(r.line1)
                 acc.push(r.line2)
                 return acc
-            }, []), context, "#FF0000")
+            }, []), context, "#0000FF")
 
-            renderNodes(state.nodes, context, "rgba(0,200,0,0.4)", highlightedNode)
         }
 
         requestAnimationFrame(frame)
@@ -264,6 +234,11 @@ const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) 
         }}>
         {children}
     </div>
+}
+
+const background = (context) => {
+    context.fillStyle = "rgba(160, 160, 160,10)";
+    context.fillRect(0, 0, WIDTH, HEIGHT)
 }
 
 export default GraphEditor;
