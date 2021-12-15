@@ -64,6 +64,16 @@ export class City {
         })
         return x
     }
+
+    getTurnLines() {
+        const lines = []
+        this.intersections.forEach(i => {
+            i.turns.forEach(t => {
+                lines.push(t.line)
+            })
+        })
+        return lines
+    }
 }
 
 export class Road {
@@ -86,7 +96,7 @@ export interface Turn {
 
 export const getTurns = (node): Turn[] => {
     return node.edges.map(e => {
-        const distToNode = 35
+        const distToNode = 5
         const other = e.getOther(node)
         let pos = other.pos.copy().sub(node.pos.copy()).normalize()
 
@@ -102,7 +112,7 @@ export const getTurns = (node): Turn[] => {
 
 const addLine = (turn: Turn, node: Node, turnSize: number) => {
     const p1 = new Vector(-turnSize, 0)
-    const p2 = new Vector(turnSize * 0.5, 0)
+    const p2 = new Vector(turnSize, 0)
     p1.rotate(turn.pos.heading() - 90)
     p2.rotate(turn.pos.heading() - 90)
     p1.add(node.pos).add(turn.pos.copy().mult(turn.distToNode))
@@ -121,12 +131,11 @@ export class Intersection {
         this.borders = []
         this.node = node
         this.turns = getTurns(this.node)
-        this.turnSize = NODE_SIZE
-        spreadVectors(this.turns)
+        this.turnSize = NODE_SIZE * 0.75
 
         let noIntersections = false
 
-        let limit = 50;
+        let limit = 25;
         while (!noIntersections && limit > 0) {
             noIntersections = true
             this.turns.map(t => {
@@ -158,6 +167,9 @@ export class Intersection {
                 if (broke) break
             }
             limit--
+        }
+        if (limit <= 0) {
+            console.log("limit reached!")
         }
 
 
@@ -244,7 +256,11 @@ export const spreadVectors = (turns: Turn[]) => {
 
 export const calcAngleRange = (turns: Turn[]) => {
     const x = turns.filter(t => t.edge !== undefined)
-    return x.reduce((acc, t) => { return acc.add(t.pos.normalize()) }, new Vector(0, 0)).mag()
+    const vComu = x.reduce((acc, t) => { return acc.add(t.pos.normalize()) }, new Vector(0, 0))
+    const sum = x.reduce((sum, v) => {
+        return sum += v.pos.heading() > vComu.heading() ? v.pos.heading() - vComu.heading() : vComu.heading() - v.pos.heading()
+    }, 0)
+    return sum / x.length
 }
 
 const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {

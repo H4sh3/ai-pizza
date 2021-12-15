@@ -4,15 +4,12 @@ import { renderIntersections, renderLines, renderNodes } from "../modules/render
 import { complexConnect, Edge, Node } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
+import { randInt } from "../etc/math"
 
 const state = {
     nodes: [] as Node[],
     edges: [] as Edge[],
     nodeMode: false,
-    gridCursor: {
-        x: 0,
-        y: 0,
-    },
     mouseCursor: {
         x: 0,
         y: 0,
@@ -54,41 +51,10 @@ export const createRoundMap = (): { nodes: Node[], edges: Edge[] } => {
     return { nodes, edges }
 }
 
-state.nodes = createRoundMap().nodes
-
-const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
-const dotsY = Math.floor(HEIGHT / (NODE_SIZE * 2))
-for (let x = 1; x < dotsX; x++) {
-    for (let y = 1; y < dotsY; y++) {
-        state.grid.push({ x: x * (WIDTH / dotsX), y: y * (HEIGHT / dotsY) })
-    }
+state.nodes = []//createRoundMap().nodes
+for (let i = 0; i < 10; i++) {
+    state.nodes.push(new Node(new Vector(randInt(NODE_SIZE, WIDTH - NODE_SIZE), randInt(NODE_SIZE, HEIGHT - NODE_SIZE))))
 }
-
-const nodeCnt = {}
-state.nodes.forEach(n1 => {
-    state.nodes.forEach(n2 => {
-        // console.log("conect!")
-        if (nodeCnt[n2.id] == undefined || nodeCnt[n2.id] < 2) {
-            // complexConnect(state.nodes, state.edges, n1, n2)
-            if (n1.id in nodeCnt) {
-                nodeCnt[n1.id] = 1
-            } else {
-                nodeCnt[n1.id] += 1
-            }
-            if (n2.id in nodeCnt) {
-                nodeCnt[n2.id] = 1
-            } else {
-                nodeCnt[n2.id] += 1
-            }
-        }
-    })
-})
-
-state.nodes.forEach((n, i) => {
-    // console.log(i)
-    state.city.addIntersection(n)
-})
-state.city.addRoads()
 
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -105,8 +71,6 @@ const GraphEditor: React.FC = () => {
     const canvasRef = useRef(null)
 
     const onmousemove = (e) => {
-        state.gridCursor.x = Math.round((e.clientX) / (WIDTH / dotsX)) * (WIDTH / dotsX)
-        state.gridCursor.y = Math.round((e.clientY) / (HEIGHT / dotsY)) * (HEIGHT / dotsY)
         state.mouseCursor.x = e.clientX
         state.mouseCursor.y = e.clientY
     }
@@ -152,6 +116,7 @@ const GraphEditor: React.FC = () => {
                 renderLines(intersection.borders, context, "#0000FF")
             })
 
+            //renderLines(state.city.getTurnLines(), context, "#00FF00")
             renderLines(state.city.roads.reduce((acc, r) => {
                 acc.push(r.line1)
                 acc.push(r.line2)
