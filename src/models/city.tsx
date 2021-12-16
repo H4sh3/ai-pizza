@@ -3,18 +3,13 @@ import { checkLineIntersection } from "../etc/math";
 import { Line } from "../modules/models";
 import { Edge, Node } from "./graph"
 import Vector, { isVector } from "./vector";
-import { textChangeRangeIsUnchanged } from "typescript";
-
-
 export class City {
     intersections: Intersection[]
     roads: Road[]
-    turnSize: number
 
     constructor() {
         this.intersections = []
         this.roads = []
-        this.turnSize = NODE_SIZE
     }
 
     addIntersection(node) {
@@ -110,7 +105,8 @@ export const getTurns = (node): Turn[] => {
     })
 }
 
-const addLine = (turn: Turn, node: Node, turnSize: number) => {
+const addLine = (turn: Turn, node: Node) => {
+    const turnSize = NODE_SIZE * 0.75
     const p1 = new Vector(-turnSize, 0)
     const p2 = new Vector(turnSize, 0)
     p1.rotate(turn.pos.heading() - 90)
@@ -125,13 +121,10 @@ export class Intersection {
     node: Node
     turns: Turn[]
     borders: Line[]
-    turnSize: number
-
     constructor(node: Node) {
         this.borders = []
         this.node = node
         this.turns = getTurns(this.node)
-        this.turnSize = NODE_SIZE * 0.75
 
         let noIntersections = false
 
@@ -139,7 +132,7 @@ export class Intersection {
         while (!noIntersections && limit > 0) {
             noIntersections = true
             this.turns.map(t => {
-                return addLine(t, this.node, this.turnSize)
+                return addLine(t, this.node)
             })
 
             // check for intersections between turnings, if yes push the enhance turningDistance
@@ -154,7 +147,7 @@ export class Intersection {
                         if (isVector(intersection)) {
                             this.turns.forEach(t => {
                                 t.distToNode += 5
-                                t = addLine(t, this.node, this.turnSize)
+                                t = addLine(t, this.node)
                             })
 
                             broke = true
@@ -254,15 +247,6 @@ export const spreadVectors = (turns: Turn[]) => {
     return turns
 }
 
-export const calcAngleRange = (turns: Turn[]) => {
-    const x = turns.filter(t => t.edge !== undefined)
-    const vComu = x.reduce((acc, t) => { return acc.add(t.pos.normalize()) }, new Vector(0, 0))
-    const sum = x.reduce((sum, v) => {
-        return sum += v.pos.heading() > vComu.heading() ? v.pos.heading() - vComu.heading() : vComu.heading() - v.pos.heading()
-    }, 0)
-    return sum / x.length
-}
-
 const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
     for (let i = 1; i < vectors.length; i++) {
         const v1 = vectors[i]
@@ -274,20 +258,31 @@ const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
     return true
 }
 
-
+export const calcMeanDirection = (directions: Vector[]): Vector => {
+    return directions.reduce((sum, v) => { return sum.add(v.copy().normalize()) }, new Vector(0, 0)).div(directions.length)
+}
 const handleSmallTurns = (turns: Turn[], node: Node) => {
-    const angleRange = calcAngleRange(turns)
-    if (angleRange > 0.5) {
-        const turn = turns[0]
+    // meav vector of where the turns are pointing
+    const meanDirection = calcMeanDirection(turns.filter(t => t.edge !== undefined).map(t => t.pos))
+    // use length of this vector to decide if they point in a similar direction
+    const meanDirecitonMag = meanDirection.mag()
+    if (meanDirecitonMag > 0.55) {
+        meanDirection.rotate(180)
+        const { distToNode, } = turns[0]
+
+        const p1 = new Vector(-NODE_SIZE * 0.75, 0)
+        const p2 = new Vector(NODE_SIZE * 0.75, 0)
+        p1.rotate(meanDirection.heading() - 90)
+        p2.rotate(meanDirection.heading() - 90)
+        p1.add(node.pos).add(meanDirection.copy().mult(distToNode))
+        p2.add(node.pos).add(meanDirection.copy().mult(distToNode))
+
         const newTurn: Turn = {
             pos: undefined,
             node: undefined,
             edge: undefined,
-            distToNode: 50,
-            line: {
-                p1: turn.line.p1.copy().sub(node.pos).rotate(-180).add(node.pos),
-                p2: turn.line.p2.copy().sub(node.pos).rotate(180).add(node.pos),
-            },
+            distToNode,
+            line: new Line(p1.x, p1.y, p2.x, p2.y)
         }
         turns.push(newTurn)
     }

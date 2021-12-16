@@ -5,7 +5,7 @@ import { degToRad } from "../etc/math";
 import { Node, Line } from "./models";
 import Vector from "../models/vector";
 import { NewNode } from "../models/graph";
-import { calcAngleRange, Intersection, Turn } from "../models/city";
+import { calcAngleRange, calcMeanDirection, Intersection, Turn, turnFactor } from "../models/city";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
@@ -63,7 +63,7 @@ export const renderIntersections = (intersections: Intersection[], context, colo
         context.strokeStyle = "#000000"
         context.font = "22px Comic Bold";
         if (n.turns.length > 0) {
-            context.fillText(Math.floor(calcAngleRange(n.turns)), n.node.pos.x + 5, n.node.pos.y - 5);
+            context.fillText(calcMeanDirection(n.turns.filter(n => n.edge !== undefined).map(n => n.pos)).mag().toFixed(4), n.node.pos.x + 5, n.node.pos.y - 5);
         }
     })
 }
