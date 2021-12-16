@@ -112,13 +112,13 @@ export const getLine = (e: Edge): Line => {
 
 export const complexConnect = (nodes: Node[], edges: Edge[], n1: Node, n2: Node) => {
     let toAdd = [{ s: n1, e: n2 }]
-    let cnt = 50
-    while (toAdd.length > 0 && cnt > 0) {
+    let max = 50
+    while (toAdd.length > 0 && max > 0) {
         const { s, e } = toAdd.shift()
         const { edgesToRemove, newConnections } = connectNodes(nodes, edges, s, e)
         edges = edges.filter(e => !edgesToRemove.includes(e.id))
         toAdd = toAdd.concat(newConnections)
-        cnt--
+        max--
     }
     return edges
 }

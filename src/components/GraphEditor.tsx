@@ -23,7 +23,7 @@ const state = {
 }
 
 export const createRoundMap = (): { nodes: Node[], edges: Edge[] } => {
-    const edges: Edge[] = [];
+    let edges: Edge[] = [];
     const nodes: Node[] = [];
     const center = new Vector(WIDTH / 2, HEIGHT / 2);
 
@@ -32,29 +32,54 @@ export const createRoundMap = (): { nodes: Node[], edges: Edge[] } => {
     nodes.push(n1)
 
     const radius = 5
-    const numNodes = 6
+    const numNodes = 18
     const stepSize = 360 / numNodes
 
     let prev = new Node(center.copy().add(new Vector(step * radius, 0).rotate(0 * stepSize)));
     nodes.push(prev)
-    complexConnect(nodes, state.edges, prev, n1)
+    edges = complexConnect(nodes, state.edges, prev, n1)
 
     for (let i = 1; i < numNodes; i++) {
         const newNode = new Node(center.copy().add(new Vector(step * radius, 0).rotate(i * stepSize)));
         nodes.push(newNode)
-        complexConnect(nodes, state.edges, newNode, n1)
-        complexConnect(nodes, state.edges, prev, newNode)
+        if (i % 2 == 0 || i % 3 == 0) {
+            edges = complexConnect(nodes, state.edges, newNode, n1)
+            edges = complexConnect(nodes, state.edges, prev, newNode)
+        }
         prev = newNode
     }
 
-    complexConnect(nodes, edges, nodes[1], nodes[nodes.length - 1])
+    edges = complexConnect(nodes, edges, nodes[1], nodes[nodes.length - 1])
     return { nodes, edges }
 }
 
-state.nodes = []//createRoundMap().nodes
-for (let i = 0; i < 10; i++) {
-    state.nodes.push(new Node(new Vector(randInt(NODE_SIZE, WIDTH - NODE_SIZE), randInt(NODE_SIZE, HEIGHT - NODE_SIZE))))
+state.nodes = [] // createRoundMap().nodes
+for (let i = 0; i < 20; i++) {
+    const p = new Vector(randInt(NODE_SIZE, WIDTH - NODE_SIZE), randInt(NODE_SIZE, HEIGHT - NODE_SIZE))
+    if (state.nodes.filter(n => n.pos.dist(p) < 150).length === 0) {
+        state.nodes.push(new Node(p))
+    }
 }
+
+for (let i = 0; i < 15; i++) {
+    let n = state.nodes[randInt(0, state.nodes.length - 1)]
+
+    if (n.getNeighbours().length > 5) continue
+
+    let closest = state.nodes
+        .filter(o => o !== n)
+        .filter(o => !n.getNeighbours().includes(o))
+        .sort((a, b) => a.pos.dist(n.pos) < b.pos.dist(n.pos) ? -1 : 0)[0]
+    state.edges = complexConnect(state.nodes, state.edges, n, closest)
+}
+
+state.city = new City()
+state.nodes.forEach(n => {
+    if (n.edges.length > 0) {
+        state.city.addIntersection(n)
+    }
+})
+state.city.addRoads()
 
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)

@@ -94,7 +94,7 @@ const GameUI: React.FC = () => {
             }
             game.currTime = time
 
-            //renderLines(game.intersections, context, "#FFFFFF", true)
+            renderLines(game.intersections, context, "#FFFFFF", true)
             renderAgents(game.agents, context)
 
             if (game.gameState.stations.length > 0) {
@@ -118,11 +118,11 @@ const GameUI: React.FC = () => {
             // renderNodes(game.nodes, context, "#AAAAAA")
             // renderLines(game.edges.map(e => e.getLine()), context, "#FFFFFF")
 
-            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#0000FF")
+            renderIntersections(game.city.intersections, context, "#9999AA")
+            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00CC00")
 
-            renderLines(game.roads, context, "#FFFFFF")
+            renderLines(game.roads, context, "#0000FF")
 
-            renderIntersections(game.city.intersections, context, "#FF0000")
 
             if (game.gameState.running) {
                 renderPizzaAnimations(game.pizzaAnimation, context)
@@ -130,16 +130,6 @@ const GameUI: React.FC = () => {
                 game.step()
             }
 
-            // new stuff 
-            game.city.intersections.forEach(intersection => {
-                renderLines(intersection.borders, context, "#0000FF")
-            })
-
-            renderLines(game.city.roads.reduce((acc, r) => {
-                acc.push(r.line1)
-                acc.push(r.line2)
-                return acc
-            }, []), context, "#0000FF")
         }
 
         requestAnimationFrame(frame)

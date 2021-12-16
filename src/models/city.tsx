@@ -1,8 +1,10 @@
 import { NODE_SIZE } from "../modules/const";
-import { checkLineIntersection } from "../etc/math";
+import { checkLineIntersection, radToDeg } from "../etc/math";
 import { Line } from "../modules/models";
 import { Edge, Node } from "./graph"
 import Vector, { isVector } from "./vector";
+import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
+
 export class City {
     intersections: Intersection[]
     roads: Road[]
@@ -145,6 +147,7 @@ export class Intersection {
                         const intersection = checkLineIntersection(t1.line, t2.line)
 
                         if (isVector(intersection)) {
+
                             this.turns.forEach(t => {
                                 t.distToNode += 5
                                 t = addLine(t, this.node)
@@ -178,10 +181,12 @@ export class Intersection {
     addBorders() {
         this.borders = []
         const pointRelations: { v: Vector, turn: Turn, angle: number }[] = [];
-        const center = this.node.pos.copy()
+        const center = this.node.pos;
+
+        // calculate how the points are positioned around the intersection
         this.turns.forEach(t => {
-            pointRelations.push({ v: t.line.p1, turn: t, angle: t.line.p1.angleBetween(center) })
-            pointRelations.push({ v: t.line.p2, turn: t, angle: t.line.p2.angleBetween(center) })
+            pointRelations.push({ v: t.line.p1, turn: t, angle: t.line.p1.copy().sub(center).heading() })
+            pointRelations.push({ v: t.line.p2, turn: t, angle: t.line.p2.copy().sub(center).heading() })
         })
 
         pointRelations.sort((a, b) => a.angle < b.angle ? -1 : 0)
@@ -189,7 +194,9 @@ export class Intersection {
             const start = pointRelations[i - 1]
             const end = pointRelations[i]
 
-            if (start.turn === end.turn && start.turn.node != undefined && end.turn.node != undefined) continue // dont connect same
+            const isSameTurn = start.turn === end.turn
+            if (isSameTurn && start.turn.node != undefined && end.turn.node != undefined) continue // dont connect same
+
             this.borders.push(new Line(start.v.x, start.v.y, end.v.x, end.v.y))
         }
 
@@ -217,31 +224,75 @@ export const calculateCenter = (points: Vector[]): Vector => {
 
 export const spreadVectors = (turns: Turn[]) => {
     turns.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
-    const minAngle = 35
+    const minAngle = 15
     let enoughSpread = minAngleBetweenVectors(turns.map(t => t.pos), minAngle)
-    let max = 500
+    let max = 150
     while (!enoughSpread && max > 0) {
         max--
+        const angleBetween = []
+
         for (let i = 1; i < turns.length; i++) {
-            const v1 = turns[i]
-            const v2 = turns[i - 1]
-            if (isAngleToSmall(v1.pos, v2.pos, minAngle)) {
-                if (v1.pos.heading() < 0 && v2.pos.heading() < 0) {
-                    if (v1.pos.heading() < v2.pos.heading()) {
-                        v1.pos.rotate(-5)
-                    } else {
-                        v2.pos.rotate(-5)
-                    }
+            const t1 = turns[i - i]
+            const t2 = turns[i]
+            const angle = radToDeg(t1.pos.angleBetween(t2.pos))
+
+            angleBetween.push({
+                t1,
+                t2,
+                angle
+            })
+        }
+
+        //  calc angle between first and last
+        angleBetween.push({
+            t1: turns[0],
+            t2: turns[turns.length - 1],
+            angle: radToDeg(turns[0].pos.angleBetween(turns[turns.length - 1].pos))
+        })
+
+        angleBetween.sort((a, b) => a.angle < b.angle ? -1 : 0)
+
+        const toRotate = angleBetween[0] // turns with smallest angle between
+
+        const rotationStep = 1
+
+        if (toRotate.t1.pos.heading() <= 0 && toRotate.t2.pos.heading() <= 0) {
+            if (toRotate.t1.pos.heading() < toRotate.t2.pos.heading()) {
+                toRotate.t1.pos.rotate(-rotationStep)
+                toRotate.t2.pos.rotate(rotationStep)
+            } else {
+                toRotate.t1.pos.rotate(rotationStep)
+                toRotate.t2.pos.rotate(-rotationStep)
+            }
+        } else if (toRotate.t1.pos.heading() >= 0 && toRotate.t2.pos.heading() >= 0) {
+            if (toRotate.t1.pos.heading() < toRotate.t2.pos.heading()) {
+                toRotate.t1.pos.rotate(rotationStep)
+                toRotate.t2.pos.rotate(-rotationStep)
+            } else {
+                toRotate.t1.pos.rotate(-rotationStep)
+                toRotate.t2.pos.rotate(rotationStep)
+            }
+        } else {
+            if (toRotate.t1.pos.heading() <= 0 && toRotate.t2.pos.heading() >= 0) {
+                if (toRotate.t1.pos.heading() < -90) {
+                    toRotate.t1.pos.rotate(5)
+                    toRotate.t2.pos.rotate(-5)
                 } else {
-                    if (v1.pos.heading() > v2.pos.heading()) {
-                        v1.pos.rotate(5)
-                    } else {
-                        v2.pos.rotate(5)
-                    }
+                    toRotate.t1.pos.rotate(-5)
+                    toRotate.t2.pos.rotate(5)
+                }
+            } else {
+                if (toRotate.t1.pos.heading() > 90) {
+                    toRotate.t1.pos.rotate(-5)
+                    toRotate.t2.pos.rotate(5)
+                } else {
+                    toRotate.t1.pos.rotate(5)
+                    toRotate.t2.pos.rotate(-5)
                 }
             }
         }
         turns.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
+
         enoughSpread = minAngleBetweenVectors(turns.map(t => t.pos), minAngle)
     }
     return turns
@@ -266,7 +317,7 @@ const handleSmallTurns = (turns: Turn[], node: Node) => {
     const meanDirection = calcMeanDirection(turns.filter(t => t.edge !== undefined).map(t => t.pos))
     // use length of this vector to decide if they point in a similar direction
     const meanDirecitonMag = meanDirection.mag()
-    if (meanDirecitonMag > 0.55) {
+    if (meanDirecitonMag > 0.50) {
         meanDirection.rotate(180)
         const { distToNode, } = turns[0]
 

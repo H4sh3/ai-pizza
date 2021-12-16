@@ -1,11 +1,11 @@
-import { DespawnAnimation } from "./models";
+import { DespawnAnimation, Line, OldNode } from "./models";
 import Agent from "./agent";
 import { NODE_SIZE } from "./const";
 import { degToRad } from "../etc/math";
-import { Node, Line } from "./models";
 import Vector from "../models/vector";
-import { NewNode } from "../models/graph";
-import { calcAngleRange, calcMeanDirection, Intersection, Turn, turnFactor } from "../models/city";
+import { Node } from "../models/graph";
+import { Intersection, } from "../models/city";
+import { isLabeledStatement } from "typescript";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
@@ -24,7 +24,7 @@ export const renderLines = (lines: Line[], context, color, withArc: boolean = fa
     })
 }
 
-export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, highlightedNode: Node | NewNode | undefined = undefined) => {
+export const renderNodes = (nodes: Node[] | OldNode[], context, color: string, highlightedNode: Node | OldNode | undefined = undefined) => {
     nodes.forEach((n, i) => {
         if (n === highlightedNode) {
             context.fillStyle = "#00FF00"
@@ -47,7 +47,7 @@ export const renderNodes = (nodes: Node[] | NewNode[], context, color: string, h
 }
 
 
-export const renderIntersections = (intersections: Intersection[], context, color: string, highlightedNode: Node | NewNode | undefined = undefined) => {
+export const renderIntersections = (intersections: Intersection[], context, color: string, highlightedNode: Node | OldNode | undefined = undefined) => {
     intersections.forEach((n, i) => {
 
         context.fillStyle = color
@@ -57,14 +57,18 @@ export const renderIntersections = (intersections: Intersection[], context, colo
         context.arc(n.node.pos.x, n.node.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
         context.stroke();
         context.fill();
-
-
-        context.fillStyle = "#000000"
-        context.strokeStyle = "#000000"
-        context.font = "22px Comic Bold";
-        if (n.turns.length > 0) {
-            context.fillText(calcMeanDirection(n.turns.filter(n => n.edge !== undefined).map(n => n.pos)).mag().toFixed(4), n.node.pos.x + 5, n.node.pos.y - 5);
-        }
+        /* 
+                n.turns.forEach(t => {
+                    context.fillStyle = "#000000"
+                    context.strokeStyle = "#000000"
+                    context.font = "22px Comic Bold";
+                    const pos = t.pos.copy().mult(50).add(n.node.pos)
+                    context.fillText(t.pos.heading().toFixed(2), pos.x, pos.y)
+                }) */
+        /* 
+                if (n.turns.length > 0) {
+                    context.fillText(calcMeanDirection(n.turns.filter(n => n.edge !== undefined).map(n => n.pos)).mag().toFixed(4), n.node.pos.x + 5, n.node.pos.y - 5);
+                } */
     })
 }
 

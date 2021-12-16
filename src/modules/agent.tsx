@@ -1,9 +1,9 @@
 import { map } from "../etc/math";
 import { Line } from "./models";
 import NeuralNetwork from "../thirdparty/nn"
-import { Node } from './models'
 import { randInt } from "../etc/math";
 import Vector from "../models/vector";
+import { Node } from "../models/graph";
 
 export interface AgentSettings {
     velReduction: number[],

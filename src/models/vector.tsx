@@ -70,9 +70,10 @@ export class Vector {
     }
 
     angleBetween(other: Vector) {
-        var dx2 = this.x - other.x;
-        var dy2 = this.y - other.y;
-        return Math.atan2(dy2, dx2);
+        const a1 = Math.atan2(this.y, this.x)
+        const a2 = Math.atan2(other.y, other.x)
+
+        return Math.abs(a1 - a2)
     }
 }
 

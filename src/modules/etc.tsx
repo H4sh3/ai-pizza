@@ -122,6 +122,7 @@ export const handleCollisions = (agent: Agent, body: Line[], roads: Line[]) => {
 
 export const handleCheckpoints = (agent: Agent, body: Line[], checkpoints: Line[]): boolean => {
     agent.tickSinceLastCP++
+    console.log("test")
     let collWithLastCp = false
     body.forEach(part => {
         const targetCP = checkpoints[agent.reachedCheckpoints % checkpoints.length]

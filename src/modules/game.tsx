@@ -4,7 +4,6 @@ import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
 import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE } from "./const"
 import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
-import generateRandomTrainingsMap from "./maps/trainingsGeneration"
 import { PretrainedModel2 } from "./model"
 import { Line } from "./models"
 import Shop from "./shop"
@@ -13,7 +12,6 @@ import Vector from "../models/vector"
 import { complexConnect, Edge, Node } from "../models/graph"
 import { City } from "../models/city"
 import { createRoundMap } from "../components/GraphEditor"
-import { access } from "fs"
 
 export class Game {
     width: number
@@ -86,14 +84,14 @@ export class Game {
         this.height = height
         this.scores = []
 
-        const { edges, nodes } = createRoundMap() // deser
+        const { edges, nodes } = createRoundMap()
         this.edges = edges
         this.nodes = nodes
 
         this.maxScore = 0
 
         this.city = new City()
-        nodes.forEach(n => {
+        this.nodes.forEach(n => {
             this.city.addIntersection(n)
         })
         this.city.addRoads()
@@ -111,7 +109,7 @@ export class Game {
             ],
             sensorSettings: {
                 num: 9,
-                len: NODE_SIZE * 3,
+                len: NODE_SIZE * 5,
                 fov: 250
             }
         }
@@ -160,10 +158,13 @@ export class Game {
     }
 
     addRoads() {
-        const usedIds = [];
         this.roads = this.city.intersections.reduce((acc, n) => {
             return acc.concat(n.borders)
         }, [])
+        this.city.roads.forEach(r => {
+            this.roads.push(r.line1)
+            this.roads.push(r.line2)
+        })
     }
 
     spawnAgent(station: Node, mutate: boolean = false) {
@@ -206,7 +207,6 @@ export class Game {
                     target: route[route.length - 1],
                     delivered: false
                 }
-                console.log(route)
                 updateOrientation(a, route)
 
                 a.route = getCheckpoints(route, this.city)
@@ -312,8 +312,6 @@ export class Game {
             this.selectedNodes = allLongRoutes.filter(r => r[0] === selectedNode).map(r => r[r.length - 1])
 
         } else if (this.shop.edgeBuild.active) {
-            if (selectedNode.getNeighbours().length > 3) return
-
             // first node selection
             if (this.shop.edgeBuild.startNode === undefined) {
                 this.shop.edgeBuild.startNode = selectedNode
@@ -324,12 +322,15 @@ export class Game {
 
                 // second node -> add edge
                 this.connectNodes(this.shop.edgeBuild.startNode, selectedNode)
-                console.log("update")
-                // update roads
-                this.shop.edgeBuild.startNode.initLines()
-                // selectedNode.initLines()
-                // this.addRoads()
-                // this.rerender()
+                this.city = new City()
+                this.nodes.forEach(n => {
+                    this.city.addIntersection(n)
+                })
+                this.initRoutes()
+                this.city.addRoads()
+                this.addRoads()
+
+                this.rerender()
 
                 this.shop.edgeBuild.startNode = undefined;
                 this.shop.edgeBuild.active = false;
@@ -360,7 +361,7 @@ export class Game {
     }
 
     connectNodes(node1: Node, node2: Node) {
-        complexConnect(this.nodes, this.edges, node1, node2)
+        this.edges = complexConnect(this.nodes, this.edges, node1, node2)
     }
 
     buyEdge() {

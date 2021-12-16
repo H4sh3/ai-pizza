@@ -146,11 +146,31 @@ it('angle between vectors', () => {
 });
 
 it('angle between vectors', () => {
-    const vector = new Vector(1, 0)
-    vector.rotate(-179)
-    console.log(vector.heading())
-    vector.rotate(-2)
-    console.log(vector.heading())
-    vector.rotate(-2)
+    let v1 = new Vector(-1, 0)
+    let v2 = new Vector(1, 0)
+    expect(radToDeg(v1.angleBetween(v2))).toBe(180)
+    expect(radToDeg(v2.angleBetween(v1))).toBe(180)
+
+    v1 = new Vector(0, -1)
+    v2 = new Vector(0, 1)
+    expect(radToDeg(v1.angleBetween(v2))).toBe(180)
+    expect(radToDeg(v2.angleBetween(v1))).toBe(180)
+
+
+    v1 = new Vector(1, 0)
+    v2 = new Vector(0, -1)
+    expect(radToDeg(v1.angleBetween(v2))).toBe(90)
+    expect(radToDeg(v2.angleBetween(v1))).toBe(90)
+
+
+    v1 = new Vector(1, 0)
+    v2 = new Vector(1, -1)
+    expect(radToDeg(v1.angleBetween(v2))).toBe(45)
+    expect(radToDeg(v2.angleBetween(v1))).toBe(45)
+
+    v1 = new Vector(1, 0)
+    v2 = new Vector(2, -1)
+    expect(radToDeg(v1.angleBetween(v2))).toBeCloseTo(26.565)
+    expect(radToDeg(v2.angleBetween(v1))).toBeCloseTo(26.565)
 })
 
