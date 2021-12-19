@@ -4,7 +4,8 @@ import { renderIntersections, renderLines, renderNodes } from "../modules/render
 import { complexConnect, Edge, Node } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
-import { randInt } from "../etc/math"
+import { degToRad, randInt } from "../etc/math"
+import { serializeGraph } from "../modules/etc"
 
 const state = {
     nodes: [] as Node[],
@@ -53,33 +54,63 @@ export const createRoundMap = (): { nodes: Node[], edges: Edge[] } => {
     return { nodes, edges }
 }
 
-state.nodes = [] // createRoundMap().nodes
-for (let i = 0; i < 20; i++) {
-    const p = new Vector(randInt(NODE_SIZE, WIDTH - NODE_SIZE), randInt(NODE_SIZE, HEIGHT - NODE_SIZE))
-    if (state.nodes.filter(n => n.pos.dist(p) < 150).length === 0) {
-        state.nodes.push(new Node(p))
+export const createRandomMap = () => {
+    for (let i = 0; i < 20; i++) {
+        const p = new Vector(randInt(NODE_SIZE, WIDTH - NODE_SIZE), randInt(NODE_SIZE, HEIGHT - NODE_SIZE))
+        if (state.nodes.filter(n => n.pos.dist(p) < 150).length === 0) {
+            state.nodes.push(new Node(p))
+        }
     }
+
+    for (let i = 0; i < 15; i++) {
+        let n = state.nodes[randInt(0, state.nodes.length - 1)]
+
+        if (n.getNeighbours().length > 5) continue
+
+        let closest = state.nodes
+            .filter(o => o !== n)
+            .filter(o => !n.getNeighbours().includes(o))
+            .sort((a, b) => a.pos.dist(n.pos) < b.pos.dist(n.pos) ? -1 : 0)[0]
+        state.edges = complexConnect(state.nodes, state.edges, n, closest)
+    }
+
+    state.city = new City()
+    state.nodes.forEach(n => {
+        if (n.edges.length > 0) {
+            state.city.addIntersection(n)
+        }
+    })
+    state.city.addRoads()
 }
 
-for (let i = 0; i < 15; i++) {
-    let n = state.nodes[randInt(0, state.nodes.length - 1)]
+const randomCircleNodes = () => {
+    const cn = new Node(new Vector(WIDTH / 2, HEIGHT / 2))
+    state.nodes.push(cn)
 
-    if (n.getNeighbours().length > 5) continue
+    for (let i = 0; i < 10; i++) {
+        let v = new Vector(200, 0)
+        v.add(cn.pos)
+        while (state.nodes.find(n => n.pos.dist(v) < 50)) {
+            v.sub(cn.pos).rotate(randInt(0, 360)).add(cn.pos)
+        }
+        const n = new Node(v)
+        state.nodes.push(n)
+        state.edges = complexConnect(state.nodes, state.edges, n, cn)
+    }
 
-    let closest = state.nodes
-        .filter(o => o !== n)
-        .filter(o => !n.getNeighbours().includes(o))
-        .sort((a, b) => a.pos.dist(n.pos) < b.pos.dist(n.pos) ? -1 : 0)[0]
-    state.edges = complexConnect(state.nodes, state.edges, n, closest)
+    state.city = new City()
+    state.nodes.forEach(n => {
+        if (n.edges.length > 0) {
+            state.city.addIntersection(n)
+        }
+    })
+    state.city.addRoads()
 }
 
-state.city = new City()
-state.nodes.forEach(n => {
-    if (n.edges.length > 0) {
-        state.city.addIntersection(n)
-    }
-})
-state.city.addRoads()
+state.nodes = []
+state.edges = []
+createRandomMap()
+
 
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
@@ -141,7 +172,8 @@ const GraphEditor: React.FC = () => {
                 renderLines(intersection.borders, context, "#0000FF")
             })
 
-            //renderLines(state.city.getTurnLines(), context, "#00FF00")
+            renderLines(state.edges.map(e => e.line), context, "#ff0000")
+
             renderLines(state.city.roads.reduce((acc, r) => {
                 acc.push(r.line1)
                 acc.push(r.line2)
@@ -180,6 +212,14 @@ const GraphEditor: React.FC = () => {
                     }
                 }>
                 Delete last node
+            </Button>
+            <Button
+                onClick={
+                    () => {
+                        serializeGraph(state.nodes, state.edges)
+                    }
+                }>
+                Serialize
             </Button>
         </div>
     </div >

@@ -18,38 +18,6 @@ const state = {
     grid: []
 }
 
-export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] } => {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
-
-    // 1. create nodes with id and pos
-    nodesSer.forEach(n => {
-        nodes.push(new Node(n.id, n.x, n.y))
-    })
-
-    // 2. create edges with nodes
-    edgesSer.forEach(eSer => {
-        const n1 = nodes.find(n => n.id === eSer.start)
-        const n2 = nodes.find(n => n.id === eSer.end)
-        const e = new Edge(n1, n2, eSer.id)
-        edges.push(e)
-    })
-
-    // 3. iterate over nodes and set edges on connections
-    nodesSer.forEach(n => {
-        const node = nodes.find(nx => nx.id === n.id)
-        Object.keys(n.connections).forEach(dir => {
-            if (n.connections[dir] === -1) {
-
-            } else {
-                const e = edges.find(e => e.id === n.connections[dir])
-                node.connections[dir] = e
-            }
-        })
-    })
-    return { nodes, edges }
-}
-
 const dotsX = Math.floor(WIDTH / (NODE_SIZE * 2))
 const dotsY = Math.floor(HEIGHT / (NODE_SIZE * 2))
 for (let x = 1; x < dotsX; x++) {
@@ -183,22 +151,6 @@ const getEdgeIds = (node: Node) => {
         "bottom":${bottom},
     }`
 }
-
-const serialize = () => {
-    let s = "[\n"
-    state.nodes.forEach(n => {
-        s += `{"id":${n.id} , "x":${n.pos.x} , "y":${n.pos.y}, "connections":${getEdgeIds(n)}},`
-    })
-    s += `\n]`
-    console.log(s)
-    let e = "[\n"
-    state.edges.forEach(n => {
-        e += `{"id":${n.id} , "start":${n.startNode.id} , "end":${n.endNode.id} },`
-    })
-    e += `\n]`
-    console.log(e)
-}
-
 
 const getNodeAtCursor = () => {
     return state.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(state.gridCursor.x, state.gridCursor.y)) < nodeSelectionRange)

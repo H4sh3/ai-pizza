@@ -34,11 +34,10 @@ export class City {
                 const t1: Turn = turnings[i]
                 const t2: Turn = turnings[j]
                 if (t1 === t2) continue
-                if (t1.edge !== t2.edge) continue
+                if (t1.edge !== t2.edge) continue // same edge
                 const edge = t1.edge; // edge between turnings
-                if (usedEdges.includes(edge)) continue
+                if (usedEdges.includes(edge)) continue // connected already
 
-                // same edge
                 this.roads.push({
                     edge,
                     line1: new Line(t1.line.p1.x, t1.line.p1.y, t2.line.p2.x, t2.line.p2.y,),
@@ -108,7 +107,7 @@ export const getTurns = (node): Turn[] => {
 }
 
 const addLine = (turn: Turn, node: Node) => {
-    const turnSize = NODE_SIZE * 0.75
+    const turnSize = NODE_SIZE //* 0.75
     const p1 = new Vector(-turnSize, 0)
     const p2 = new Vector(turnSize, 0)
     p1.rotate(turn.pos.heading() - 90)
@@ -149,7 +148,7 @@ export class Intersection {
                         if (isVector(intersection)) {
 
                             this.turns.forEach(t => {
-                                t.distToNode += 5
+                                t.distToNode += 15
                                 t = addLine(t, this.node)
                             })
 
@@ -224,7 +223,7 @@ export const calculateCenter = (points: Vector[]): Vector => {
 
 export const spreadVectors = (turns: Turn[]) => {
     turns.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
-    const minAngle = 15
+    const minAngle = 25
     let enoughSpread = minAngleBetweenVectors(turns.map(t => t.pos), minAngle)
     let max = 150
     while (!enoughSpread && max > 0) {
@@ -232,22 +231,34 @@ export const spreadVectors = (turns: Turn[]) => {
         const angleBetween = []
 
         for (let i = 1; i < turns.length; i++) {
-            const t1 = turns[i - i]
+            const t1 = turns[i - 1]
             const t2 = turns[i]
-            const angle = radToDeg(t1.pos.angleBetween(t2.pos))
+            const angle = t1.pos.angleBetween(t2.pos)
+
+            const t0 = i - 2 >= 0 ? turns[i - 2] : turns[turns.length - 1]
+            const t3 = i + 1 <= turns.length - 1 ? turns[i + 1] : turns[0]
+
+            const a1 = t0.pos.angleBetween(t1.pos)
+            const a2 = t2.pos.angleBetween(t3.pos)
 
             angleBetween.push({
                 t1,
                 t2,
-                angle
+                angle,
+                rotateT1: a1 > a2
             })
         }
 
         //  calc angle between first and last
+
+        const a1 = turns[0].pos.angleBetween(turns[1].pos)
+        const a2 = turns[turns.length - 1].pos.angleBetween(turns[turns.length - 2].pos)
+
         angleBetween.push({
             t1: turns[0],
             t2: turns[turns.length - 1],
-            angle: radToDeg(turns[0].pos.angleBetween(turns[turns.length - 1].pos))
+            angle: turns[0].pos.angleBetween(turns[turns.length - 1].pos),
+            rotateT1: a1 > a2
         })
 
         angleBetween.sort((a, b) => a.angle < b.angle ? -1 : 0)
@@ -256,38 +267,62 @@ export const spreadVectors = (turns: Turn[]) => {
 
         const rotationStep = 1
 
-        if (toRotate.t1.pos.heading() <= 0 && toRotate.t2.pos.heading() <= 0) {
+        if (toRotate.t1.pos.heading() < 0 && toRotate.t2.pos.heading() < 0) {
             if (toRotate.t1.pos.heading() < toRotate.t2.pos.heading()) {
-                toRotate.t1.pos.rotate(-rotationStep)
-                toRotate.t2.pos.rotate(rotationStep)
+                if (toRotate.rotateT1) {
+                    toRotate.t1.pos.rotate(-rotationStep)
+                } else {
+                    toRotate.t2.pos.rotate(rotationStep)
+                }
             } else {
-                toRotate.t1.pos.rotate(rotationStep)
-                toRotate.t2.pos.rotate(-rotationStep)
+                if (toRotate.rotateT1) {
+                    toRotate.t1.pos.rotate(rotationStep)
+                } else {
+                    toRotate.t2.pos.rotate(-rotationStep)
+                }
             }
-        } else if (toRotate.t1.pos.heading() >= 0 && toRotate.t2.pos.heading() >= 0) {
+        } else if (toRotate.t1.pos.heading() > 0 && toRotate.t2.pos.heading() > 0) {
             if (toRotate.t1.pos.heading() < toRotate.t2.pos.heading()) {
-                toRotate.t1.pos.rotate(rotationStep)
-                toRotate.t2.pos.rotate(-rotationStep)
+                if (toRotate.rotateT1) {
+                    toRotate.t1.pos.rotate(-rotationStep)
+                } else {
+                    toRotate.t2.pos.rotate(rotationStep)
+                }
             } else {
-                toRotate.t1.pos.rotate(-rotationStep)
-                toRotate.t2.pos.rotate(rotationStep)
+                if (toRotate.rotateT1) {
+                    toRotate.t1.pos.rotate(rotationStep)
+                } else {
+                    toRotate.t2.pos.rotate(-rotationStep)
+                }
             }
         } else {
             if (toRotate.t1.pos.heading() <= 0 && toRotate.t2.pos.heading() >= 0) {
                 if (toRotate.t1.pos.heading() < -90) {
-                    toRotate.t1.pos.rotate(5)
-                    toRotate.t2.pos.rotate(-5)
+                    if (toRotate.rotateT1) {
+                        toRotate.t1.pos.rotate(rotationStep)
+                    } else {
+                        toRotate.t2.pos.rotate(-rotationStep)
+                    }
                 } else {
-                    toRotate.t1.pos.rotate(-5)
-                    toRotate.t2.pos.rotate(5)
+                    if (toRotate.rotateT1) {
+                        toRotate.t1.pos.rotate(-rotationStep)
+                    } else {
+                        toRotate.t2.pos.rotate(rotationStep)
+                    }
                 }
-            } else {
+            } else if (toRotate.t1.pos.heading() >= 0 && toRotate.t2.pos.heading() <= 0) {
                 if (toRotate.t1.pos.heading() > 90) {
-                    toRotate.t1.pos.rotate(-5)
-                    toRotate.t2.pos.rotate(5)
+                    if (toRotate.rotateT1) {
+                        toRotate.t1.pos.rotate(-rotationStep)
+                    } else {
+                        toRotate.t2.pos.rotate(rotationStep)
+                    }
                 } else {
-                    toRotate.t1.pos.rotate(5)
-                    toRotate.t2.pos.rotate(-5)
+                    if (toRotate.rotateT1) {
+                        toRotate.t1.pos.rotate(rotationStep)
+                    } else {
+                        toRotate.t2.pos.rotate(-rotationStep)
+                    }
                 }
             }
         }
@@ -319,7 +354,8 @@ const handleSmallTurns = (turns: Turn[], node: Node) => {
     const meanDirecitonMag = meanDirection.mag()
     if (meanDirecitonMag > 0.50) {
         meanDirection.rotate(180)
-        const { distToNode, } = turns[0]
+        // const { distToNode } = turns[0]
+        const distToNode = 25
 
         const p1 = new Vector(-NODE_SIZE * 0.75, 0)
         const p2 = new Vector(NODE_SIZE * 0.75, 0)

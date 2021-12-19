@@ -3,7 +3,7 @@ import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
 import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE } from "./const"
-import { agentsCollisions, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
+import { agentsCollisions, deserialize, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
 import { PretrainedModel2 } from "./model"
 import { Line } from "./models"
 import Shop from "./shop"
@@ -11,7 +11,7 @@ import { randInt } from "../etc/math"
 import Vector from "../models/vector"
 import { complexConnect, Edge, Node } from "../models/graph"
 import { City } from "../models/city"
-import { createRoundMap } from "../components/GraphEditor"
+import GraphCity from "./maps/graphCity"
 
 export class Game {
     width: number
@@ -84,7 +84,7 @@ export class Game {
         this.height = height
         this.scores = []
 
-        const { edges, nodes } = createRoundMap()
+        const { edges, nodes } = GraphCity()
         this.edges = edges
         this.nodes = nodes
 

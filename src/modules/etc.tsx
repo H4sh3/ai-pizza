@@ -3,7 +3,7 @@ import Agent, { Sensor, SensorSettings } from "./agent"
 import { NODE_SIZE } from "./const"
 import { checkLineIntersection, map } from "../etc/math"
 import Vector, { isVector } from "../models/vector"
-import { Node } from "../models/graph"
+import { Edge, Node } from "../models/graph"
 import { Line, OldNode } from "./models"
 import { check } from "prettier"
 import { City } from "../models/city"
@@ -165,4 +165,52 @@ export const getAllRoutesDict = (nodes: Node[]) => {
     sorted.sort((a, b) => a.l > b.l ? -1 : 0)
 
     return sorted;
+}
+
+
+export const serializeGraph = (nodes: Node[], edges: Edge[]) => {
+    let s = "[\n"
+    nodes.forEach(n => {
+        s += `{"id":"${n.id}" , "x":${n.pos.x} , "y":${n.pos.y}, "edges":[${n.edges.map(n => { return `"${n.id}"` })}]},`
+    })
+    s += `\n]`
+    console.log(s)
+    let e = "[\n"
+    edges.forEach(n => {
+        e += `{"id":"${n.id}" , "start":"${n.node1.id}" , "end":"${n.node2.id}" },`
+    })
+    e += `\n]`
+    console.log(e)
+}
+
+export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] } => {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+
+    // 1. create nodes with id and pos
+    nodesSer.forEach(n => {
+        const node = new Node(new Vector(n.x, n.y))
+        node.id = n.id
+        nodes.push(node)
+    })
+
+    // 2. create edges with nodes
+    edgesSer.forEach(eSer => {
+        const n1 = nodes.find(n => n.id === eSer.start)
+        const n2 = nodes.find(n => n.id === eSer.end)
+        const e = new Edge(n1, n2)
+        e.id = eSer.id
+        edges.push(e)
+    })
+
+    // 3. iterate over nodes and set edges on connections
+    nodesSer.forEach(n => {
+        const node = nodes.find(nx => nx.id === n.id)
+        console.log(n.edges)
+        n.edges.forEach(eId => {
+            const e = edges.find(e => e.id === eId)
+            node.edges.push(e)
+        })
+    })
+    return { nodes, edges }
 }

@@ -174,3 +174,9 @@ it('angle between vectors', () => {
     expect(radToDeg(v2.angleBetween(v1))).toBeCloseTo(26.565)
 })
 
+it("test", () => {
+    const p1 = { x: 1, y: 0 }
+    const p2 = { x: 0, y: 1 }
+    var angleDeg = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+    console.log(angleDeg)
+})
