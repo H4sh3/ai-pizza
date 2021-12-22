@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { renderIntersections, renderLines, renderNodes } from "../modules/render"
+import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns } from "../modules/render"
 import { complexConnect, Edge, Node } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
 import { degToRad, randInt } from "../etc/math"
 import { serializeGraph } from "../modules/etc"
+import { stat } from "fs"
 
 const state = {
     nodes: [] as Node[],
     edges: [] as Edge[],
-    nodeMode: false,
+    nodeMode: true,
     mouseCursor: {
         x: 0,
         y: 0,
@@ -19,7 +20,7 @@ const state = {
     selectedNode: undefined,
     grid: [],
     intersections: [],
-    city: new City(),
+    city: new City([], []),
     vectors: []
 }
 
@@ -65,7 +66,7 @@ export const createRandomMap = () => {
     for (let i = 0; i < 15; i++) {
         let n = state.nodes[randInt(0, state.nodes.length - 1)]
 
-        if (n.getNeighbours().length > 5) continue
+        if (n.getNeighbours().length > 3) continue
 
         let closest = state.nodes
             .filter(o => o !== n)
@@ -74,13 +75,7 @@ export const createRandomMap = () => {
         state.edges = complexConnect(state.nodes, state.edges, n, closest)
     }
 
-    state.city = new City()
-    state.nodes.forEach(n => {
-        if (n.edges.length > 0) {
-            state.city.addIntersection(n)
-        }
-    })
-    state.city.addRoads()
+    state.city = new City(state.nodes, state.edges)
 }
 
 const randomCircleNodes = () => {
@@ -98,18 +93,30 @@ const randomCircleNodes = () => {
         state.edges = complexConnect(state.nodes, state.edges, n, cn)
     }
 
-    state.city = new City()
-    state.nodes.forEach(n => {
-        if (n.edges.length > 0) {
-            state.city.addIntersection(n)
-        }
-    })
-    state.city.addRoads()
+    state.city = new City(state.nodes, state.edges)
 }
 
 state.nodes = []
 state.edges = []
+
+const center = new Vector(WIDTH / 2, HEIGHT / 2)
+
+/* state.nodes.push(new Node(center.copy().add(new Vector(-100, 0))))
+state.nodes.push(new Node(center.copy().add(new Vector(300, 50))))
+state.nodes.push(new Node(center.copy().add(new Vector(300, -50))))
+
+state.nodes.push(new Node(center.copy().add(new Vector(-200, 0))))
+
+state.edges = complexConnect(state.nodes, state.edges, state.nodes[0], state.nodes[1])
+state.edges = complexConnect(state.nodes, state.edges, state.nodes[0], state.nodes[2])
+state.edges = complexConnect(state.nodes, state.edges, state.nodes[0], state.nodes[3])
+ */
+
 createRandomMap()
+
+state.city = new City(state.nodes, state.edges)
+
+// createRandomMap()
 
 
 const GraphEditor: React.FC = () => {
@@ -141,13 +148,9 @@ const GraphEditor: React.FC = () => {
                 state.selectedNode = node
             } else {
                 state.edges = complexConnect(state.nodes, state.edges, state.selectedNode, node)
-                state.city = new City()
-                state.nodes.forEach(n => {
-                    if (n.edges.length > 0) {
-                        state.city.addIntersection(n)
-                    }
-                })
-                state.city.addRoads()
+
+                state.city = new City(state.nodes, state.edges)
+
                 state.selectedNode = undefined
             }
         }
@@ -172,7 +175,14 @@ const GraphEditor: React.FC = () => {
                 renderLines(intersection.borders, context, "#0000FF")
             })
 
-            renderLines(state.edges.map(e => e.line), context, "#ff0000")
+            //renderLines(state.edges.map(e => e.line), context, "#ff0000")
+            renderTurns(state.city.intersections, context, "#ff0000")
+
+            state.city.intersections.forEach(i => {
+                i.turns.filter(t => t.centerDot).forEach(t => {
+                    renderPoint(t.centerDot, context, "#00ff00")
+                })
+            })
 
             renderLines(state.city.roads.reduce((acc, r) => {
                 acc.push(r.line1)
@@ -245,7 +255,7 @@ interface ButtonProps {
     disabled?: boolean
 }
 
-const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) => {
+export const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) => {
     return <div className={`${disabled ? "cursor-not-allowed bg-gray-200" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
         onClick={() => {
             if (disabled) return

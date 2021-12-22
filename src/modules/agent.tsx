@@ -6,7 +6,7 @@ import Vector from "../models/vector";
 import { Node } from "../models/graph";
 
 export interface AgentSettings {
-    velReduction: number[],
+    velReduction: number[], // for agents that get upgrades
     steerRange: number,
     sensorSettings: SensorSettings
 }

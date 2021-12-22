@@ -24,6 +24,26 @@ export const renderLines = (lines: Line[], context, color, withArc: boolean = fa
     })
 }
 
+export const renderTurns = (intersections, context, color) => {
+    context.strokeStyle = color
+
+    const turns = intersections.reduce((acc, i) => {
+        return acc.concat(i.turns)
+    }, [])
+    turns.forEach((t, i) => {
+        const l = t.line
+        context.beginPath();
+        context.moveTo(l.p1.x, l.p1.y);
+        context.lineTo(l.p2.x, l.p2.y);
+
+        context.stroke();
+
+        context.fillStyle = "#000000"
+        context.font = "22px Comic Bold";
+        //context.fillText(i, (l.p1.x + l.p2.x) / 2, (l.p1.y + l.p2.y) / 2);
+    })
+}
+
 export const renderNodes = (nodes: Node[] | OldNode[], context, color: string, highlightedNode: Node | OldNode | undefined = undefined) => {
     nodes.forEach((n, i) => {
         if (n === highlightedNode) {
@@ -95,7 +115,7 @@ export const renderAgents = (agents: Agent[], context) => {
     agents.filter(a => a.alive).forEach(a => {
         context.save()
         if (a.highlighted) {
-            context.fillStyle = `rgba(${a.color.r}, ${a.color.g}, ${a.color.b},100)`;
+            context.fillStyle = `rgba(255,0,0,100)`;
         } else {
             context.fillStyle = `rgba(255,255,255,50)`;
         }
@@ -105,11 +125,11 @@ export const renderAgents = (agents: Agent[], context) => {
         context.rotate(degToRad(a.dir.heading()))
         context.fillRect(- (s / 2), - (s / 2), s * 2, s)
         context.restore()
-        if (a.route && a.task && !a.task.delivered) {
-            var img = document.getElementById("pizza");
-            //context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
-            context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
-        }
+        /*         if (a.route && a.task && !a.task.delivered) {
+                    var img = document.getElementById("pizza");
+                    //context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
+                    context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
+                } */
 
     })
 }

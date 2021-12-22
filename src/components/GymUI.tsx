@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, WIDTH } from "../modules/const"
 import { Line } from "../modules/models"
-import Agent from "../modules/agent"
 import Gym from "../modules/gym"
 import { renderLines, renderAgents, renderIntersections } from "../modules/render"
+import { Button } from "./GraphEditor"
 
 
 const gym = new Gym(WIDTH, HEIGHT)
 
-const Canvas2d: React.FC = () => {
+const GymUI: React.FC = () => {
     const props = {
         width: WIDTH,
         height: HEIGHT
@@ -35,25 +35,13 @@ const Canvas2d: React.FC = () => {
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
             lastTime = time
-            //renderNodes(gym.nodes, context)
             renderLines(gym.roads, context, "#FFFFFF")
-            //const usedIds = []
-            //renderLines(gym.agents[0].route.map(n => n.getLines(usedIds)).reduce((acc, x) => { return acc.concat(x) }, []), context, "#00FF00")
-            /* 
-                        gym.agents.forEach(a => {
-                            renderLines(getRouteLines(a), context, "#00FF00")
-                        }) */
-
+            renderLines(gym.checkpoints, context, "#00FF00")
+            renderLines(gym.intersections, context, "#00FF00")
             if (showSensors) {
                 renderLines(gym.sensorVisual, context, "#0000FF")
             }
             renderAgents(gym.agents, context)
-
-            // renderCrashed(gym.crashed, context)
-
-            if (showIntersections) {
-                renderIntersections(gym.intersections, context)
-            }
 
             gym.step()
         }
@@ -64,37 +52,31 @@ const Canvas2d: React.FC = () => {
 
     return <div>
         <canvas ref={canvasRef} {...props} />
-        <button onClick={() => {
-            gym.pretrain = true
-            gym.pretrainEpoch = 0
-        }}>fast!</button>
-        <button onClick={() => {
-            console.log(gym.agents[0].nn.serialize())
-        }}>save</button>
-        {iter}
-        <button onClick={() => {
-            showSensors = !showSensors
-        }}>sensors</button>
-        <button onClick={() => {
-            showIntersections = !showIntersections
-        }
-        }>intersections</button>
-    </div>
-}
-
-const getRouteLines = (agent: Agent) => {
-    const lines = {}
-    agent.route.map(n => {
-        n.getEdges().map(e => {
-            if (lines[e.id]) {
-                lines[e.id].cnt += 1
-            } else {
-                lines[e.id] = { cnt: 1, e }
+        <div className="flex flex-row gap-2 items-center justify-center p-2">
+            <Button onClick={() => {
+                gym.pretrain = true
+                gym.pretrainEpoch = 0
+            }}>fast!</Button>
+            <Button onClick={() => {
+                console.log(gym.agents[0].nn.serialize())
+            }}>save</Button>
+            {iter}
+            <Button onClick={() => {
+                showSensors = !showSensors
+            }}>sensors</Button>
+            <Button onClick={() => {
+                showIntersections = !showIntersections
             }
-        })
-    })
-    const arr = Object.keys(lines).map(k => { return lines[k] })
-    return arr.filter(e => e.cnt === 2).map(cntObject => cntObject.e.getLine())
+            }>intersections</Button>
+            <div className="p-2">
+                {`${gym.pretrainEpoch} / ${gym.pretrainEpochs}`}
+            </div>
+            |
+            <div className="p-2">
+                {`${gym.agents.length} / ${gym.settings.popSize}`}
+            </div>
+        </div>
+    </div>
 }
 
 
@@ -118,4 +100,4 @@ const checkpointsJson = (checkpoints: Line[]) => {
 
 
 
-export default Canvas2d;
+export default GymUI;

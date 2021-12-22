@@ -9,9 +9,16 @@ export class City {
     intersections: Intersection[]
     roads: Road[]
 
-    constructor() {
+    constructor(nodes: Node[], edges: Edge[]) {
         this.intersections = []
         this.roads = []
+
+        nodes.forEach(n => {
+            if (n.edges.length > 0) {
+                this.addIntersection(n)
+            }
+        })
+        this.finalize(edges)
     }
 
     addIntersection(node) {
@@ -19,20 +26,15 @@ export class City {
     }
 
     addRoads() {
-        const turnings = this.intersections.reduce((acc, i) => {
-            i.turns.forEach(t => {
-                if (t.node) {
-                    acc.push(t)
-                }
-            })
-            return acc
+        const turns: Turn[] = this.intersections.reduce((acc, t) => {
+            return acc.concat(t.turns.filter(t => t.node !== undefined))
         }, [])
 
         const usedEdges: Edge[] = []
-        for (let i = 0; i < turnings.length; i++) {
-            for (let j = 0; j < turnings.length; j++) {
-                const t1: Turn = turnings[i]
-                const t2: Turn = turnings[j]
+        for (let i = 0; i < turns.length; i++) {
+            for (let j = 0; j < turns.length; j++) {
+                const t1: Turn = turns[i]
+                const t2: Turn = turns[j]
                 if (t1 === t2) continue
                 if (t1.edge !== t2.edge) continue // same edge
                 const edge = t1.edge; // edge between turnings
@@ -70,6 +72,45 @@ export class City {
         })
         return lines
     }
+
+
+    finalize(edges: Edge[]) {
+
+        // fix turns that are further away from own node
+        const allTurns: Turn[] = this.intersections.reduce((acc, t) => {
+            return acc.concat(t.turns.filter(t => t.node !== undefined))
+        }, [])
+
+        for (let i = 0; i < edges.length; i++) {
+            const e = edges[i]
+            const node1 = e.node1
+            const node2 = e.node2
+
+            const turn1 = allTurns.find(t => t.edge === e && t.node === node2)
+            const turn2 = allTurns.find(t => t.edge === e && t.node === node1)
+
+            const posTurn1 = turn1.line.p1.copy().add(turn1.line.p2).div(2)
+            const posTurn2 = turn2.line.p1.copy().add(turn2.line.p2).div(2)
+
+            const distNode1ToTurn1 = node1.pos.dist(posTurn1)
+            const distNode1ToTurn2 = node1.pos.dist(posTurn2)
+            const distNode2ToTurn1 = node2.pos.dist(posTurn1)
+            const distNode2ToTurn2 = node2.pos.dist(posTurn2)
+
+            if (distNode1ToTurn2 < distNode1ToTurn1 && distNode2ToTurn2 < distNode2ToTurn1) {
+                console.log("test")
+                turn1.line.p1 = turn2.line.p2.copy()
+                turn1.line.p2 = turn2.line.p1.copy()
+            }
+        }
+
+        this.addBorders()
+        this.addRoads()
+    }
+
+    addBorders() {
+        this.intersections.forEach(i => i.addBorders())
+    }
 }
 
 export class Road {
@@ -88,6 +129,7 @@ export interface Turn {
     edge: Edge,
     distToNode: number,
     line?: Line,
+    centerDot?: Vector
 }
 
 export const getTurns = (node): Turn[] => {
@@ -138,20 +180,18 @@ export class Intersection {
 
             // check for intersections between turnings, if yes push the enhance turningDistance
             for (let i = 0; i < this.turns.length; i++) {
-                const t1 = this.turns[i]
+                let t1 = this.turns[i]
                 let broke = false
                 for (let j = 0; j < this.turns.length; j++) {
-                    const t2 = this.turns[j]
+                    let t2 = this.turns[j]
                     if (t1 !== t2) {
                         const intersection = checkLineIntersection(t1.line, t2.line)
 
                         if (isVector(intersection)) {
-
                             this.turns.forEach(t => {
                                 t.distToNode += 15
                                 t = addLine(t, this.node)
                             })
-
                             broke = true
                             noIntersections = false
                             spreadVectors(this.turns)
@@ -174,7 +214,6 @@ export class Intersection {
         handleSmallTurns(this.turns, this.node)
 
         // close the intersection where no turning exists
-        this.addBorders()
     }
 
     addBorders() {
@@ -205,7 +244,6 @@ export class Intersection {
         if (first.turn !== last.turn || (first.turn.node === undefined || first.turn.node === undefined)) {
             this.borders.push(new Line(first.v.x, first.v.y, last.v.x, last.v.y))
         }
-
     }
 }
 
@@ -223,7 +261,7 @@ export const calculateCenter = (points: Vector[]): Vector => {
 
 export const spreadVectors = (turns: Turn[]) => {
     turns.sort((a, b) => a.pos.heading() < b.pos.heading() ? -1 : 0)
-    const minAngle = 25
+    const minAngle = 5
     let enoughSpread = minAngleBetweenVectors(turns.map(t => t.pos), minAngle)
     let max = 150
     while (!enoughSpread && max > 0) {

@@ -94,7 +94,7 @@ const GameUI: React.FC = () => {
             }
             game.currTime = time
 
-            renderLines(game.intersections, context, "#FFFFFF", true)
+            renderLines(game.intersections, context, "#FF0000", false)
             renderAgents(game.agents, context)
 
             if (game.gameState.stations.length > 0) {
@@ -118,7 +118,7 @@ const GameUI: React.FC = () => {
             // renderNodes(game.nodes, context, "#AAAAAA")
             // renderLines(game.edges.map(e => e.getLine()), context, "#FFFFFF")
 
-            renderIntersections(game.city.intersections, context, "#9999AA")
+            // renderIntersections(game.city.intersections, context, "#9999AA")
             renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00CC00")
 
             renderLines(game.roads, context, "#0000FF")

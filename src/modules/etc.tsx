@@ -122,7 +122,6 @@ export const handleCollisions = (agent: Agent, body: Line[], roads: Line[]) => {
 
 export const handleCheckpoints = (agent: Agent, body: Line[], checkpoints: Line[]): boolean => {
     agent.tickSinceLastCP++
-    console.log("test")
     let collWithLastCp = false
     body.forEach(part => {
         const targetCP = checkpoints[agent.reachedCheckpoints % checkpoints.length]
@@ -163,7 +162,7 @@ export const getAllRoutesDict = (nodes: Node[]) => {
     })
 
     sorted.sort((a, b) => a.l > b.l ? -1 : 0)
-
+    console.log(sorted)
     return sorted;
 }
 
@@ -206,11 +205,18 @@ export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] 
     // 3. iterate over nodes and set edges on connections
     nodesSer.forEach(n => {
         const node = nodes.find(nx => nx.id === n.id)
-        console.log(n.edges)
         n.edges.forEach(eId => {
             const e = edges.find(e => e.id === eId)
             node.edges.push(e)
         })
     })
     return { nodes, edges }
+}
+
+export function shuffle<T>(a: T[]): T[] {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
 }
