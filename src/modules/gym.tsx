@@ -91,11 +91,7 @@ export class Gym {
         this.nodes = nodes
         this.edges = edges
 
-        this.city = new City()
-        this.nodes.forEach(n => {
-            this.city.addIntersection(n)
-        })
-        this.city.addRoads()
+        this.city = new City(nodes, edges)
 
         this.allRoutes = getAllRoutesDict(this.nodes)
         for (let i = 0; i < 1; i++) {

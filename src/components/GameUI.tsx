@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { allowedNeighbours, GAME_DURATION, HEIGHT, nodeSelectionRange, NODE_SIZE, SCORE_HEIGHT, SCORE_WIDTH, WIDTH } from "../modules/const"
 import { Line } from "../modules/models"
-import Agent from "../modules/agent"
-import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts, renderIntersections } from "../modules/render"
+import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts, renderIntersections, scaleFactor } from "../modules/render"
 import Game from "../modules/game"
 import { map } from "../etc/math"
 import Vector from "../models/vector"
@@ -101,9 +100,11 @@ const GameUI: React.FC = () => {
                 renderStations(game.gameState.stations, context)
             }
 
+            context.fillStyle = "#ff00ff"
+            context.fillRect(mouse.x, mouse.y, 5, 5)
             // used when the user picks first station
             if (game.gameState.pickingFirstNode) {
-                const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
+                const highlightedNode: Node = game.nodes.find(n => n.pos.copy().mult(scaleFactor).add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
                 renderNodes(game.nodes.filter(n => n.getNeighbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
             }
 

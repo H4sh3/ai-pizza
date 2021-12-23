@@ -7,12 +7,14 @@ import { Node } from "../models/graph";
 import { Intersection, } from "../models/city";
 import { isLabeledStatement } from "typescript";
 
+export const scaleFactor = 0.5
+
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
     lines.forEach((l, i) => {
         context.beginPath();
-        context.moveTo(l.p1.x, l.p1.y);
-        context.lineTo(l.p2.x, l.p2.y);
+        context.moveTo(l.p1.x * scaleFactor, l.p1.y * scaleFactor);
+        context.lineTo(l.p2.x * scaleFactor, l.p2.y * scaleFactor);
         if (withArc) {
             context.arc(l.p2.x, l.p2.y, 5, 0, 2 * Math.PI);
         }
@@ -33,8 +35,8 @@ export const renderTurns = (intersections, context, color) => {
     turns.forEach((t, i) => {
         const l = t.line
         context.beginPath();
-        context.moveTo(l.p1.x, l.p1.y);
-        context.lineTo(l.p2.x, l.p2.y);
+        context.moveTo(l.p1.x * scaleFactor, l.p1.y * scaleFactor);
+        context.lineTo(l.p2.x * scaleFactor, l.p2.y * scaleFactor);
 
         context.stroke();
 
@@ -54,7 +56,7 @@ export const renderNodes = (nodes: Node[] | OldNode[], context, color: string, h
             context.strokeStyle = color
         }
         context.beginPath();
-        context.arc(n.pos.x, n.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
+        context.arc(n.pos.x * scaleFactor, n.pos.y * scaleFactor, NODE_SIZE / 2, 0, 2 * Math.PI);
         context.stroke();
         context.fill();
 
@@ -74,7 +76,7 @@ export const renderIntersections = (intersections: Intersection[], context, colo
         context.strokeStyle = color
 
         context.beginPath();
-        context.arc(n.node.pos.x, n.node.pos.y, NODE_SIZE / 2, 0, 2 * Math.PI);
+        context.arc(n.node.pos.x * scaleFactor, n.node.pos.y * scaleFactor, NODE_SIZE / 2, 0, 2 * Math.PI);
         context.stroke();
         context.fill();
         /* 
@@ -111,6 +113,7 @@ export const renderStations = (nodes: Node[], context) => {
 }
 
 const s = NODE_SIZE * 0.5
+
 export const renderAgents = (agents: Agent[], context) => {
     agents.filter(a => a.alive).forEach(a => {
         context.save()
@@ -121,9 +124,9 @@ export const renderAgents = (agents: Agent[], context) => {
         }
         const aX = a.pos.x
         const aY = a.pos.y
-        context.translate(aX, aY)
+        context.translate(aX * scaleFactor, aY * scaleFactor)
         context.rotate(degToRad(a.dir.heading()))
-        context.fillRect(- (s / 2), - (s / 2), s * 2, s)
+        context.fillRect(- (s / 2), - (s / 2), s * 2 * scaleFactor, s * scaleFactor)
         context.restore()
         /*         if (a.route && a.task && !a.task.delivered) {
                     var img = document.getElementById("pizza");
@@ -138,7 +141,7 @@ export const renderAgents = (agents: Agent[], context) => {
 export const renderPizzaAnimations = (despawns: DespawnAnimation[], context) => {
     despawns.forEach(d => {
         var img = document.getElementById("pizza");
-        context.drawImage(img, d.pos.x - s, d.pos.y - s, NODE_SIZE * d.factor, NODE_SIZE * d.factor);
+        context.drawImage(img, (d.pos.x * scaleFactor) - s, (d.pos.y * scaleFactor) - s, NODE_SIZE * d.factor, NODE_SIZE * d.factor);
         d.factor -= 0.01
     })
 }

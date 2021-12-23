@@ -7,6 +7,7 @@ import { City } from "../models/city"
 import { degToRad, randInt } from "../etc/math"
 import { serializeGraph } from "../modules/etc"
 import { stat } from "fs"
+import { nodes } from "../modules/maps/graphCity"
 
 const state = {
     nodes: [] as Node[],
@@ -56,26 +57,28 @@ export const createRoundMap = (): { nodes: Node[], edges: Edge[] } => {
 }
 
 export const createRandomMap = () => {
+    const nodes = []
+    let edges = []
     for (let i = 0; i < 20; i++) {
-        const p = new Vector(randInt(NODE_SIZE, WIDTH - NODE_SIZE), randInt(NODE_SIZE, HEIGHT - NODE_SIZE))
-        if (state.nodes.filter(n => n.pos.dist(p) < 150).length === 0) {
-            state.nodes.push(new Node(p))
+        const p = new Vector(randInt(NODE_SIZE, (WIDTH * 2) - NODE_SIZE), randInt(NODE_SIZE, (HEIGHT * 2) - NODE_SIZE))
+        if (nodes.filter(n => n.pos.dist(p) < 150).length === 0) {
+            nodes.push(new Node(p))
         }
     }
 
-    for (let i = 0; i < 15; i++) {
-        let n = state.nodes[randInt(0, state.nodes.length - 1)]
+    for (let i = 0; i < 25; i++) {
+        let n = nodes[randInt(0, nodes.length - 1)]
 
         if (n.getNeighbours().length > 3) continue
 
-        let closest = state.nodes
+        let closest = nodes
             .filter(o => o !== n)
             .filter(o => !n.getNeighbours().includes(o))
             .sort((a, b) => a.pos.dist(n.pos) < b.pos.dist(n.pos) ? -1 : 0)[0]
-        state.edges = complexConnect(state.nodes, state.edges, n, closest)
+        edges = complexConnect(nodes, edges, n, closest)
     }
 
-    state.city = new City(state.nodes, state.edges)
+    return { nodes, edges }
 }
 
 const randomCircleNodes = () => {
@@ -253,10 +256,11 @@ const drawGrid = (context) => {
 interface ButtonProps {
     onClick: () => void
     disabled?: boolean
+    color?: string
 }
 
-export const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false }) => {
-    return <div className={`${disabled ? "cursor-not-allowed bg-gray-200" : "cursor-pointer hover:bg-green-300 border-green-500"} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
+export const Button: React.FC<ButtonProps> = ({ onClick, children, disabled = false, color = "green" }) => {
+    return <div className={`${disabled ? "cursor-not-allowed bg-gray-200" : `cursor-pointer hover:bg-${color}-300 border-${color}-500`} text-center px-2 py-1 select-none bg-white rounded-lg border-2  `}
         onClick={() => {
             if (disabled) return
             onClick()

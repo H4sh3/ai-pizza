@@ -4,7 +4,7 @@ import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
 import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE } from "./const"
 import { agentsCollisions, deserialize, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
-import { PretrainedModel2 } from "./model"
+import { PretrainedModel3 } from "./model"
 import { Line } from "./models"
 import Shop from "./shop"
 import { randInt } from "../etc/math"
@@ -13,6 +13,8 @@ import { complexConnect, Edge, Node } from "../models/graph"
 import { City } from "../models/city"
 import GraphCity from "./maps/graphCity"
 import WierdCity2 from "./maps/wierdCity2"
+import { scaleFactor } from "./render"
+import { createRandomMap } from "../components/GraphEditor"
 
 export class Game {
     width: number
@@ -82,13 +84,13 @@ export class Game {
     fixedNodesBak: Node[]
 
     constructor(width, height) {
-        this.neuralNet = NeuralNetwork.deserialize(PretrainedModel2)
+        this.neuralNet = NeuralNetwork.deserialize(PretrainedModel3)
         this.shop = new Shop()
         this.width = width
         this.height = height
         this.scores = []
 
-        const { edges, nodes } = WierdCity2() //GraphCity()
+        const { edges, nodes } = createRandomMap()// WierdCity2() //GraphCity()
         this.edges = edges
         this.nodes = nodes
 
@@ -287,7 +289,7 @@ export class Game {
     }
 
     mouseClicked(mouseX: number, mouseY: number) {
-        const selectedNode: Node = this.nodes.find(n => n.pos.dist(new Vector(mouseX, mouseY)) < nodeSelectionRange)
+        const selectedNode: Node = this.nodes.find(n => n.pos.copy().mult(scaleFactor).dist(new Vector(mouseX, mouseY)) < nodeSelectionRange)
         if (selectedNode === undefined) return
 
         if (this.gameState.pickingFirstNode) {
