@@ -1,14 +1,9 @@
+import { Node } from '../models/graph'
 
-// a start
-
-import { NewNode } from "../models/graph"
-import { Node } from "../modules/models"
 import priorityQueue from "./prioQueue"
 
-const search = (nodes: NewNode[], start: NewNode, end: NewNode): NewNode[] => {
-    let x: NewNode[] = []
-
-    const openList = priorityQueue<NewNode>()
+const search = (nodes: Node[], start: Node, end: Node): Node[] => {
+    const openList = priorityQueue<Node>()
     openList.put(start, 0)
 
     const closeList = {}
@@ -16,8 +11,6 @@ const search = (nodes: NewNode[], start: NewNode, end: NewNode): NewNode[] => {
 
     const prevNode = {}
     prevNode[start.id] = null
-
-    const unknown = nodes.filter(n => n !== start)
 
     while (openList.size() > 0) {
         const current = openList.pop()

@@ -115,17 +115,17 @@ state.edges = complexConnect(state.nodes, state.edges, state.nodes[0], state.nod
 state.edges = complexConnect(state.nodes, state.edges, state.nodes[0], state.nodes[3])
  */
 
-createRandomMap()
-// const { nodes, edges } = IntersectionsMap()
-// state.nodes = nodes
-// state.edges = edges
-// state.city = new City(state.nodes, state.edges)
-// 
-// createRandomMap()
+const initNewRandomMap = () => {
+    const { nodes, edges } = createRandomMap()
+    state.nodes = nodes
+    state.edges = edges
+    state.city = new City(state.nodes, state.edges)
+}
 
-
+initNewRandomMap()
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
+
 
     const props = {
         width: WIDTH,
@@ -139,8 +139,9 @@ const GraphEditor: React.FC = () => {
     const canvasRef = useRef(null)
 
     const onmousemove = (e) => {
-        state.mouseCursor.x = e.clientX
-        state.mouseCursor.y = e.clientY
+        var rect = canvasRef.current.getBoundingClientRect();
+        state.mouseCursor.x = e.clientX - rect.left
+        state.mouseCursor.y = e.clientY - rect.top
     }
 
     const onmousedown = () => {
@@ -237,6 +238,15 @@ const GraphEditor: React.FC = () => {
                     }
                 }>
                 Serialize
+            </Button>
+            <Button
+                onClick={
+                    () => {
+                        initNewRandomMap()
+                        RERENDER()
+                    }
+                }>
+                initNewRandomMap
             </Button>
         </div>
     </div >

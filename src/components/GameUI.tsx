@@ -32,11 +32,11 @@ const GameUI: React.FC = () => {
     }
 
     const canvasRef = useRef(null)
-    const canvasScoreRef = useRef(null)
 
     const onmousemove = (e) => {
-        mouse.x = e.clientX
-        mouse.y = e.clientY
+        var rect = canvasRef.current.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left
+        mouse.y = e.clientY - rect.top
     }
 
     const onmousedown = () => {

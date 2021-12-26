@@ -20,6 +20,9 @@ class App extends React.Component<Record<string, unknown>, undefined> {
       case "/editor":
         currentComponent = <GraphEditor />
         break
+      case "/gym":
+        currentComponent = <GymUI />
+        break
     }
 
     return <Navbar>
@@ -33,12 +36,15 @@ const Navbar: React.FC = ({ children }) => {
   const { pathname } = window.location
   return <div className="flex flex-col gap-1">
     <div className="flex flex-row gap-2 justify-center items-center pt-3">
-      <Button color={`${pathname === "/editor" ? "green" : "yellow"}`} onClick={() => {
+      <Button color={`${pathname === "/editor" ? "yellow" : "green"}`} onClick={() => {
         window.location.pathname = "/editor"
       }}>Editor</Button>
-      <Button color={`${pathname === "/" ? "green" : "yellow"}`} onClick={() => {
+      <Button color={`${pathname === "/" ? "yellow" : "green"}`} onClick={() => {
         window.location.pathname = "/"
       }}>Game</Button>
+      <Button color={`${pathname === "gym" ? "yellow" : "green"}`} onClick={() => {
+        window.location.pathname = "/gym"
+      }}>Gym</Button>
 
     </div>
     {children}

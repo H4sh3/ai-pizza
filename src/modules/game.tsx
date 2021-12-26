@@ -117,7 +117,7 @@ export class Game {
             ],
             sensorSettings: {
                 num: 9,
-                len: NODE_SIZE * 9,
+                len: NODE_SIZE * 15,
                 fov: 250
             }
         }
@@ -264,7 +264,7 @@ export class Game {
         updateAgents()
 
         while (this.agents.length < this.gameState.numAgents) {
-            this.spawnAgent(this.gameState.stations[0], true)
+            this.spawnAgent(this.gameState.stations[0])
         }
         this.rerender()
 

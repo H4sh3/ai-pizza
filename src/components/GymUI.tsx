@@ -8,7 +8,7 @@ import { City } from "../models/city"
 import Game from "../modules/game"
 import NeuralNetwork from "../thirdparty/nn"
 import { randInt } from "../etc/math"
-import { IntersectionsMap, SpiderWebMap, StraightMap, ZigZagMap } from "../modules/maps/training/trainingsMaps"
+import { BigIntersectionsMap, IntersectionsMap, SpiderWebMap, StraightMap, ZigZagMap } from "../modules/maps/training/trainingsMaps"
 
 
 let gym = new Gym(WIDTH, HEIGHT, IntersectionsMap)
@@ -26,7 +26,6 @@ const GymUI: React.FC = () => {
     gym.setHighscore = setHighscore
 
     let showIntersections = false
-    let showSensors = false
 
 
     useEffect(() => {
@@ -46,9 +45,7 @@ const GymUI: React.FC = () => {
             renderLines(gym.roads, context, "#000000")
             renderLines(gym.checkpoints, context, "#00FF00")
             renderLines(gym.intersections, context, "#00FF00")
-            if (showSensors) {
-                renderLines(gym.sensorVisual, context, "#0000FF")
-            }
+            renderLines(gym.sensorVisual, context, "#0000FF")
             renderAgents(gym.agents, context)
             renderText(`${gym.iteration} / ${gym.maxIter}`, 150, 20, context, "#000000")
             renderText(`Agents alive: ${gym.agents.filter(a => a.alive).length} / ${gym.settings.popSize + 1}`, 150, 40, context, "#000000")
@@ -74,9 +71,6 @@ const GymUI: React.FC = () => {
             <Button onClick={() => {
                 console.log(gym.agents[0].nn.serialize())
             }}>save</Button>
-            <Button onClick={() => {
-                showSensors = !showSensors
-            }}>sensors</Button>
             <Button onClick={() => {
                 showIntersections = !showIntersections
             }
@@ -118,6 +112,12 @@ const GymUI: React.FC = () => {
                 gym.setHighscore = setHighscore
                 setHighscore(0)
             }}>SpiderWebMap</Button>
+            <Button onClick={() => {
+                gym = new Gym(WIDTH, HEIGHT, BigIntersectionsMap)
+                gym.setHighscore = setHighscore
+                setHighscore(0)
+            }}>BigIntersectionsMap</Button>
+
         </div>
         <div className="flex flex-row gap-2 items-center justify-center p-2">
             <Button onClick={() => {

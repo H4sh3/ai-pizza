@@ -60,7 +60,7 @@ export class Gym {
             velReduction: [1.25],
             sensorSettings: {
                 num: 9,
-                len: NODE_SIZE * 9,
+                len: NODE_SIZE * 15,
                 fov: 250
             }
         }
