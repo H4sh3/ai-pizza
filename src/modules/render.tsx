@@ -137,6 +137,12 @@ export const renderAgents = (agents: Agent[], context) => {
     })
 }
 
+export const renderText = (v, x, y, context, color) => {
+    context.fillStyle = color
+    context.font = "22px Comic Bold";
+    context.fillText(v, x, y);
+}
+
 
 export const renderPizzaAnimations = (despawns: DespawnAnimation[], context) => {
     despawns.forEach(d => {

@@ -6,6 +6,7 @@ import Game from "../modules/game"
 import { map } from "../etc/math"
 import Vector from "../models/vector"
 import { Node } from "../models/graph"
+import { NeuralNetworkStore } from "./GymUI"
 
 const game = new Game(WIDTH, HEIGHT)
 const mouse = {
@@ -47,8 +48,6 @@ const GameUI: React.FC = () => {
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
 
-        const canvasScore = canvasScoreRef.current
-        const contextScore = canvasScore.getContext('2d')
 
         let lastTime
         let frameId
@@ -58,9 +57,6 @@ const GameUI: React.FC = () => {
             if (timeDelta < 1000 / 60) return
             context.fillStyle = "rgba(160, 160, 160,10)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
-
-            contextScore.fillStyle = "rgba(200, 200, 200,10)";
-            contextScore.fillRect(0, 0, SCORE_WIDTH, SCORE_HEIGHT)
 
             // draw scores
 
@@ -74,7 +70,6 @@ const GameUI: React.FC = () => {
                     lastScores.push(new Line(map(i, 0, score.length, 0, SCORE_WIDTH / 2), zero - p1, map(i + 1, 0, score.length, 0, SCORE_WIDTH / 2), zero - p2))
                 }
             })
-            renderLines(lastScores, contextScore, "#000000")
 
             const lines = []
             for (let i = 1; i < game.gameState.scores.length; i++) {
@@ -84,7 +79,6 @@ const GameUI: React.FC = () => {
                 const x2 = game.scores.length > 0 ? map(i + 1, 0, game.scores[0].length, 0, SCORE_WIDTH / 2) : i * 5
                 lines.push(new Line(x1, zero - p1, x2, zero - p2))
             }
-            renderLines(lines, contextScore, "#FF0000")
 
             lastTime = time
 
@@ -139,55 +133,58 @@ const GameUI: React.FC = () => {
 
 
 
-    return <div className="flex flex-row border-2 shadow select-none">
-        <div onMouseMove={onmousemove}
-            onMouseDown={onmousedown}
-            className="p-2"
-        >
-            <canvas style={{ "border": "1px solid #000000" }} ref={canvasRef} {...props} />
-        </div>
-        <div className="p-5 flex flex-col gap-2">
-            {game.gameState.pickingFirstNode ?
-                <IntroMessage />
-                :
-                <div className="flex flex-col gap-2">
-                    <ScoreBoard game={game} />
-                    <Store game={game} />
-                    <AgentsStats game={game} />
-                    {
-                        game.gameState.running ? <></>
-                            :
-                            game.gameState.delivered === 0 ?
+    return <div className="flex flex-col">
+
+        <div className="flex flex-row border-2 shadow select-none">
+            <div onMouseMove={onmousemove}
+                onMouseDown={onmousedown}
+                className="p-2"
+            >
+                <canvas style={{ "border": "1px solid #000000" }} ref={canvasRef} {...props} />
+            </div>
+            <div className="p-5 flex flex-col gap-2">
+                {game.gameState.pickingFirstNode ?
+                    <IntroMessage />
+                    :
+                    <div className="flex flex-col gap-2">
+                        <ScoreBoard game={game} />
+                        <Store game={game} />
+                        <AgentsStats game={game} />
+                        {
+                            game.gameState.running ? <></>
+                                :
+                                game.gameState.delivered === 0 ?
+                                    <Button
+                                        onClick={
+                                            () => {
+                                                game.gameState.running = true
+                                                game.rerender()
+                                            }
+                                        }>
+                                        Start
+                                    </Button>
+                                    :
+                                    <></>
+                        }
+                        {
+                            !game.gameState.running && game.gameState.delivered > 0 ?
                                 <Button
                                     onClick={
                                         () => {
-                                            game.gameState.running = true
+                                            game.init()
                                             game.rerender()
                                         }
                                     }>
-                                    Start
-                                </Button>
-                                :
+                                    Restart
+                                </Button> :
                                 <></>
-                    }
-                    {
-                        !game.gameState.running && game.gameState.delivered > 0 ?
-                            <Button
-                                onClick={
-                                    () => {
-                                        game.init()
-                                        game.rerender()
-                                    }
-                                }>
-                                Restart
-                            </Button> :
-                            <></>
-                    }
-                </div>
-            }
-        </div>
-        <canvas style={{ "border": "1px solid #000000" }} ref={canvasScoreRef} height={SCORE_HEIGHT} width={SCORE_WIDTH} />
-    </div >
+                        }
+                    </div>
+                }
+            </div>
+        </div >
+        <NeuralNetworkStore neuralNetworkLocation={game.neuralNet} />
+    </div>
 }
 
 

@@ -4,6 +4,7 @@ import NeuralNetwork from "../thirdparty/nn"
 import { randInt } from "../etc/math";
 import Vector from "../models/vector";
 import { Node } from "../models/graph";
+import { LAYER_CONFIG } from "./const";
 
 export interface AgentSettings {
     velReduction: number[], // for agents that get upgrades
@@ -61,11 +62,10 @@ class Agent {
     highlighted: boolean
 
     constructor(spawnSettings: SpawnSettings, settings: AgentSettings, nn?: NeuralNetwork) {
-        const hidL = Math.floor(((settings.sensorSettings.num * 2) + 2) / 2)
         if (nn) {
             this.nn = nn.copy()
         } else {
-            this.nn = new NeuralNetwork(settings.sensorSettings.num * 2, hidL, 2)
+            this.nn = new NeuralNetwork(LAYER_CONFIG.input, LAYER_CONFIG.hidden, LAYER_CONFIG.output)
         }
         this.spawnSettings = spawnSettings
         this.pos = this.spawnSettings.startNode.pos.copy();

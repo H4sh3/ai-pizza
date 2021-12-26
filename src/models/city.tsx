@@ -172,7 +172,7 @@ export class Intersection {
         let noIntersections = false
 
         let limit = 25;
-        while (!noIntersections && limit > 0) {
+        while (!noIntersections) {
             noIntersections = true
             this.turns.map(t => {
                 return addLine(t, this.node)
@@ -201,7 +201,8 @@ export class Intersection {
                 }
                 if (broke) break
             }
-            limit--
+
+            if (--limit <= 0) break
         }
         if (limit <= 0) {
             console.log("limit reached!")

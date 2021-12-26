@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react"
-import { HEIGHT, WIDTH } from "../modules/const"
+import React, { useEffect, useRef, useState } from "react"
+import { HEIGHT, LAYER_CONFIG, WIDTH } from "../modules/const"
 import { Line } from "../modules/models"
 import Gym from "../modules/gym"
-import { renderLines, renderAgents, renderIntersections } from "../modules/render"
+import { renderLines, renderAgents, renderIntersections, renderText } from "../modules/render"
 import { Button } from "./GraphEditor"
 import { City } from "../models/city"
 import Game from "../modules/game"
 import NeuralNetwork from "../thirdparty/nn"
 import { randInt } from "../etc/math"
+import { IntersectionsMap, SpiderWebMap, StraightMap, ZigZagMap } from "../modules/maps/training/trainingsMaps"
 
 
-const gym = new Gym(WIDTH, HEIGHT)
+let gym = new Gym(WIDTH, HEIGHT, IntersectionsMap)
 
 const GymUI: React.FC = () => {
     const props = {
@@ -20,6 +21,9 @@ const GymUI: React.FC = () => {
 
     const canvasRef = useRef(null)
     const [iter, setIter] = useState("0")
+    const [highscore, setHighscore] = useState(0)
+
+    gym.setHighscore = setHighscore
 
     let showIntersections = false
     let showSensors = false
@@ -35,18 +39,19 @@ const GymUI: React.FC = () => {
             frameId = requestAnimationFrame(frame)
             setIter(timeDelta.toFixed(2))
             if (timeDelta < 1000 / 60) return
-            context.fillStyle = "rgb(140, 140, 140)";
+            context.fillStyle = "rgb(180, 180, 180)";
             context.fillRect(0, 0, WIDTH, HEIGHT)
 
             lastTime = time
-            renderLines(gym.roads, context, "#FFFFFF")
+            renderLines(gym.roads, context, "#000000")
             renderLines(gym.checkpoints, context, "#00FF00")
             renderLines(gym.intersections, context, "#00FF00")
             if (showSensors) {
                 renderLines(gym.sensorVisual, context, "#0000FF")
             }
             renderAgents(gym.agents, context)
-
+            renderText(`${gym.iteration} / ${gym.maxIter}`, 150, 20, context, "#000000")
+            renderText(`Agents alive: ${gym.agents.filter(a => a.alive).length} / ${gym.settings.popSize + 1}`, 150, 40, context, "#000000")
             gym.step()
         }
 
@@ -69,7 +74,6 @@ const GymUI: React.FC = () => {
             <Button onClick={() => {
                 console.log(gym.agents[0].nn.serialize())
             }}>save</Button>
-            {iter}
             <Button onClick={() => {
                 showSensors = !showSensors
             }}>sensors</Button>
@@ -84,6 +88,50 @@ const GymUI: React.FC = () => {
             <div className="p-2">
                 {`${gym.agents.length} / ${gym.settings.popSize}`}
             </div>
+            <div>
+                Highscore: {highscore}
+            </div>
+            <Button color="red" onClick={() => {
+                gym.bestNeuralNet = new NeuralNetwork(LAYER_CONFIG.input, LAYER_CONFIG.hidden, LAYER_CONFIG.output)
+                gym.addAgents()
+            }
+            }>fresh model</Button>
+        </div>
+        <div className="flex flex-row gap-2 items-center justify-center p-2">
+            <Button onClick={() => {
+                gym = new Gym(WIDTH, HEIGHT, StraightMap)
+                gym.setHighscore = setHighscore
+                setHighscore(0)
+            }}>Straight</Button>
+            <Button onClick={() => {
+                gym = new Gym(WIDTH, HEIGHT, ZigZagMap)
+                gym.setHighscore = setHighscore
+                setHighscore(0)
+            }}>Zigzag</Button>
+            <Button onClick={() => {
+                gym = new Gym(WIDTH, HEIGHT, IntersectionsMap)
+                gym.setHighscore = setHighscore
+                setHighscore(0)
+            }}>Intersections</Button>
+            <Button onClick={() => {
+                gym = new Gym(WIDTH, HEIGHT, SpiderWebMap)
+                gym.setHighscore = setHighscore
+                setHighscore(0)
+            }}>SpiderWebMap</Button>
+        </div>
+        <div className="flex flex-row gap-2 items-center justify-center p-2">
+            <Button onClick={() => {
+                gym.toggleTrainigsParameter()
+            }}>toggleTrainigsParameter {gym.trainingsParameter}</Button>
+            <Button onClick={() => {
+                gym.maxIter += 500
+            }}>maxIter +500</Button>
+            <Button onClick={() => {
+                if (gym.maxIter >= 500) {
+                    gym.maxIter -= 500
+                }
+            }}>maxIter -500</Button>
+
         </div>
     </div>
 }
@@ -92,7 +140,7 @@ interface NeuralNetworkStoreProps {
     neuralNetworkLocation: NeuralNetwork
 }
 
-const NeuralNetworkStore = ({ neuralNetworkLocation }) => {
+export const NeuralNetworkStore: React.FC<NeuralNetworkStoreProps> = ({ neuralNetworkLocation }) => {
     const [storageItems, setStorageItems] = useState(Object.keys(localStorage))
     return <div className="flex flex-row gap-2">
         <div className="grid grid-cols-1 gap-2 items-center justify-center">

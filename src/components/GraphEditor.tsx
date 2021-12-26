@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns } from "../modules/render"
+import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns, scaleFactor } from "../modules/render"
 import { complexConnect, Edge, Node } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
-import { degToRad, randInt } from "../etc/math"
 import { serializeGraph } from "../modules/etc"
-import { stat } from "fs"
-import { nodes } from "../modules/maps/graphCity"
+import { IntersectionsMap } from "../modules/maps/training/trainingsMaps"
+import { randInt } from "../etc/math"
 
 const state = {
     nodes: [] as Node[],
@@ -99,6 +98,7 @@ const randomCircleNodes = () => {
     state.city = new City(state.nodes, state.edges)
 }
 
+
 state.nodes = []
 state.edges = []
 
@@ -116,9 +116,11 @@ state.edges = complexConnect(state.nodes, state.edges, state.nodes[0], state.nod
  */
 
 createRandomMap()
-
-state.city = new City(state.nodes, state.edges)
-
+// const { nodes, edges } = IntersectionsMap()
+// state.nodes = nodes
+// state.edges = edges
+// state.city = new City(state.nodes, state.edges)
+// 
 // createRandomMap()
 
 
@@ -143,7 +145,7 @@ const GraphEditor: React.FC = () => {
 
     const onmousedown = () => {
         if (state.nodeMode) {
-            state.nodes.push(new Node(new Vector(state.mouseCursor.x, state.mouseCursor.y)))
+            state.nodes.push(new Node(new Vector(state.mouseCursor.x / scaleFactor, state.mouseCursor.y / scaleFactor)))
         } else {
             const node = getNodeAtCursor()
             if (node === undefined) return
@@ -173,6 +175,8 @@ const GraphEditor: React.FC = () => {
 
             renderNodes(state.nodes, context, "#BBBBBB", getNodeAtCursor())
             renderIntersections(state.city.intersections, context, "#BBBBBB", getNodeAtCursor())
+
+            renderPoint(new Vector(state.mouseCursor.x, state.mouseCursor.y), context, "#ffff00")
 
             state.city.intersections.forEach(intersection => {
                 renderLines(intersection.borders, context, "#0000FF")
@@ -239,7 +243,7 @@ const GraphEditor: React.FC = () => {
 }
 
 const getNodeAtCursor = () => {
-    return state.nodes.find(n => n.pos.copy().dist(new Vector(state.mouseCursor.x, state.mouseCursor.y)) < nodeSelectionRange)
+    return state.nodes.find(n => n.pos.copy().dist(new Vector(state.mouseCursor.x / scaleFactor, state.mouseCursor.y / scaleFactor)) < nodeSelectionRange)
 }
 
 const drawGrid = (context) => {
