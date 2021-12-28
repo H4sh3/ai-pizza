@@ -79,6 +79,9 @@ const GymUI: React.FC = () => {
             <div className="p-2">
                 {`${gym.pretrainEpoch} / ${gym.pretrainEpochs}`}
             </div>
+            <div className="p-2">
+                {`TD: ${iter}`}
+            </div>
             |
             <div className="p-2">
                 {`${gym.agents.length} / ${gym.settings.popSize}`}
@@ -144,18 +147,20 @@ const GymUI: React.FC = () => {
 
 interface NeuralNetworkStoreProps {
     neuralNetworkLocation: NeuralNetwork
+    loadSideEffect?: () => void
 }
 
-export const NeuralNetworkStore: React.FC<NeuralNetworkStoreProps> = ({ neuralNetworkLocation }) => {
+export const NeuralNetworkStore: React.FC<NeuralNetworkStoreProps> = ({ neuralNetworkLocation, loadSideEffect = () => { } }) => {
     const [storageItems, setStorageItems] = useState(Object.keys(localStorage))
     return <div className="flex flex-row gap-2">
         <div className="grid grid-cols-1 gap-2 items-center justify-center">
             {
                 storageItems.map((item, i) => {
-                    return <div className="border-2 flex flex-row gap-2 justify-around items-center" key={i}>
+                    return <div className="border-2 flex flex-row gap-2 justify-around items-center p-1" key={i}>
                         {`model: ${item}`}
                         <Button color="green" onClick={() => {
                             neuralNetworkLocation = NeuralNetwork.deserialize(localStorage.getItem(item))
+                            loadSideEffect()
                         }}>load</Button>
                         <Button color="orange" onClick={() => {
                             neuralNetworkLocation = NeuralNetwork.deserialize(localStorage.getItem(item))

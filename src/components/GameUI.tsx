@@ -156,7 +156,7 @@ const GameUI: React.FC = () => {
                 }
             </div>
         </div >
-        <NeuralNetworkStore neuralNetworkLocation={game.neuralNet} />
+        <NeuralNetworkStore neuralNetworkLocation={game.neuralNet} loadSideEffect={() => { game.agents = []; game.deathAnimations = [] }} />
         <Button
             onClick={
                 () => {
