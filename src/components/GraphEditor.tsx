@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { HEIGHT, nodeSelectionRange, NODE_SIZE, WIDTH } from "../modules/const"
-import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns, scaleFactor } from "../modules/render"
+import { HEIGHT, nodeSelectionRange, NODE_SIZE, scaleFactor, WIDTH } from "../modules/const"
+import { renderIntersections, renderLines, renderNodes, renderPoint, renderTurns } from "../modules/render"
 import { complexConnect, Edge, Node } from "../models/graph"
 import Vector from "../models/vector"
 import { City } from "../models/city"
@@ -122,7 +122,7 @@ const initNewRandomMap = () => {
     state.city = new City(state.nodes, state.edges)
 }
 
-initNewRandomMap()
+// initNewRandomMap()
 const GraphEditor: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
 
@@ -165,6 +165,9 @@ const GraphEditor: React.FC = () => {
     useEffect(() => {
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
+        const drawing = new Image();
+        drawing.src = "city1.png"; // can also be a remote URL e.g. http://
+
         let lastTime
         let frameId
         const frame = time => {
@@ -173,6 +176,7 @@ const GraphEditor: React.FC = () => {
             if (timeDelta < 1000 / 30) return
             lastTime = time
             background(context)
+            context.drawImage(drawing, 0, 0, HEIGHT, HEIGHT);
 
             renderNodes(state.nodes, context, "#BBBBBB", getNodeAtCursor())
             renderIntersections(state.city.intersections, context, "#BBBBBB", getNodeAtCursor())

@@ -2,7 +2,7 @@ import { DespawnAnimation } from "./models"
 import search from "../etc/astar"
 import NeuralNetwork from "../thirdparty/nn"
 import Agent, { AgentSettings, SpawnSettings, Task } from "./agent"
-import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE } from "./const"
+import { allowedNeighbours, GAME_DURATION, nodeSelectionRange, NODE_SIZE, scaleFactor } from "./const"
 import { agentsCollisions, deserialize, directionOfNodes, getAllRoutesDict, getCheckpoints, getSensorIntersectionsWith, transformSensor } from "./etc"
 import { PretrainedModel3 } from "./model"
 import { Line } from "./models"
@@ -13,9 +13,16 @@ import { complexConnect, Edge, Node } from "../models/graph"
 import { City } from "../models/city"
 import GraphCity from "./maps/graphCity"
 import WierdCity2 from "./maps/wierdCity2"
-import { scaleFactor } from "./render"
 import { createRandomMap } from "../components/GraphEditor"
+import { SpiderWebMap } from "./maps/training/trainingsMaps"
+import VancouverMap from "./maps/vancouver"
+import BigCity from "./maps/bigCity"
 
+export interface DeathAnimation {
+    pos: Vector
+    z: number
+    dir: Vector
+}
 export class Game {
     width: number
     height: number
@@ -66,6 +73,7 @@ export class Game {
 
     pizzaAnimation: DespawnAnimation[]
     scrollingTexts: DespawnAnimation[]
+    deathAnimations: DeathAnimation[]
 
     startTime: number
     currTime: number
@@ -84,13 +92,15 @@ export class Game {
     fixedNodesBak: Node[]
 
     constructor(width, height) {
+        this.rerender = () => { }
         this.neuralNet = NeuralNetwork.deserialize(PretrainedModel3)
         this.shop = new Shop()
         this.width = width
         this.height = height
         this.scores = []
+        this.deathAnimations = []
 
-        const { edges, nodes } = createRandomMap()// WierdCity2() //GraphCity()
+        const { edges, nodes } = BigCity()//VancouverMap() //SpiderWebMap()// createRandomMap()// WierdCity2() //GraphCity()
         this.edges = edges
         this.nodes = nodes
 
@@ -104,6 +114,9 @@ export class Game {
         this.city.addRoads()
         this.addRoads()
         this.init()
+
+        // this.gameState.pickingFirstNode = false
+        // this.spawnStation(this.nodes[randInt(0, this.nodes.length - 1)])
     }
 
     init() {
@@ -129,7 +142,7 @@ export class Game {
         this.initRoutes()
 
         this.gameState = {
-            numAgents: 1,
+            numAgents: 25,
             delivered: 0,
             running: false,
             stations: [],
@@ -181,6 +194,9 @@ export class Game {
     }
 
     step() {
+
+        if (!this.gameState.running) return
+
         const updateAgents = () => {
             this.intersections = []
             this.sensorVisual = []
@@ -194,14 +210,22 @@ export class Game {
                 // otherwise agent will try again
             })
 
+            this.agents.filter(a => !a.alive).forEach(a => {
+                const newDeathAnimation = {
+                    pos: a.pos.copy(),
+                    z: 0,
+                    dir: a.dir.copy()
+                }
+                this.deathAnimations.push(newDeathAnimation)
+            })
             this.agents = this.agents.filter(a => a.alive)
-            this.agents = this.agents.filter(a => a.tickSinceLastCP < 250)
+            //this.agents = this.agents.filter(a => a.tickSinceLastCP < 250)
 
             // assign new tasks
             this.agents.filter(a => a.task === undefined).forEach(a => {
 
 
-                const targetNode: Node = this.fixedNodes.pop()//this.selectedNodes[randInt(0, this.selectedNodes.length - 1)]
+                const targetNode: Node = this.selectedNodes[randInt(0, this.selectedNodes.length - 1)]
                 const route = search(this.nodes, this.gameState.stations[0], targetNode);
                 const task: Task = {
                     start: route[0],
@@ -264,7 +288,7 @@ export class Game {
         updateAgents()
 
         while (this.agents.length < this.gameState.numAgents) {
-            this.spawnAgent(this.gameState.stations[0])
+            this.spawnAgent(this.gameState.stations[0], true)
         }
         this.rerender()
 
@@ -288,38 +312,38 @@ export class Game {
         )
     }
 
+    spawnStation(node: Node) {
+        // user is picking first node
+        if (node.getNeighbours().length > allowedNeighbours) return
+
+        this.gameState.stations.push(node)
+        this.spawnAgent(node)
+        this.rerender()
+
+        let allLongRoutes: Node[][] = []
+        for (let i = 0; i < this.allRoutes.length; i++) {
+            const route = this.allRoutes[i];
+            if (route.l > 2) {
+                allLongRoutes = [...allLongRoutes, ...route.routes]
+            }
+        }
+        this.selectedNodes = allLongRoutes.filter(r => r[0] === node).map(r => r[r.length - 1])
+
+        this.fixedNodesBak = []
+        for (let i = 0; i < 1000; i++) {
+            const n = this.selectedNodes[randInt(0, this.selectedNodes.length - 1)]
+            this.fixedNodesBak.push(n)
+        }
+        this.fixedNodes = [...this.fixedNodesBak]
+    }
+
     mouseClicked(mouseX: number, mouseY: number) {
         const selectedNode: Node = this.nodes.find(n => n.pos.copy().mult(scaleFactor).dist(new Vector(mouseX, mouseY)) < nodeSelectionRange)
         if (selectedNode === undefined) return
 
         if (this.gameState.pickingFirstNode) {
-            // user is picking first node
-            if (selectedNode.getNeighbours().length > allowedNeighbours) return
-
-            this.gameState.stations.push(selectedNode)
             this.gameState.pickingFirstNode = false
-            this.spawnAgent(selectedNode)
-            this.rerender()
-
-            let allLongRoutes: Node[][] = []
-            for (let i = 0; i < this.allRoutes.length; i++) {
-                const route = this.allRoutes[i];
-                if (route.l > 2) {
-                    allLongRoutes = [...allLongRoutes, ...route.routes]
-                }
-            }
-            this.selectedNodes = allLongRoutes.filter(r => r[0] === selectedNode).map(r => r[r.length - 1])
-
-            console.log(this.selectedNodes.length)
-            this.fixedNodesBak = []
-            for (let i = 0; i < 1000; i++) {
-                const n = this.selectedNodes[randInt(0, this.selectedNodes.length - 1)]
-                this.fixedNodesBak.push(n)
-            }
-            this.fixedNodes = [...this.fixedNodesBak]
-            console.log(this.fixedNodes)
-
-
+            this.spawnStation(selectedNode)
         } else if (this.shop.edgeBuild.active) {
             // first node selection
             if (this.shop.edgeBuild.startNode === undefined) {
@@ -392,6 +416,13 @@ export class Game {
 
     toggleAutoBuy() {
         this.gameState.autoBuyAgents = !this.gameState.autoBuyAgents
+    }
+
+    updateTime(time) {
+        if (this.gameState.running && this.startTime === 0) {
+            this.startTime = time
+        }
+        this.currTime = time
     }
 }
 

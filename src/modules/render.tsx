@@ -1,13 +1,12 @@
 import { DespawnAnimation, Line, OldNode } from "./models";
 import Agent from "./agent";
-import { NODE_SIZE } from "./const";
+import { NODE_SIZE, scaleFactor } from "./const";
 import { degToRad } from "../etc/math";
 import Vector from "../models/vector";
 import { Node } from "../models/graph";
 import { Intersection, } from "../models/city";
 import { isLabeledStatement } from "typescript";
-
-export const scaleFactor = 0.5
+import { DeathAnimation } from "./game";
 
 export const renderLines = (lines: Line[], context, color, withArc: boolean = false) => {
     context.strokeStyle = color
@@ -79,18 +78,6 @@ export const renderIntersections = (intersections: Intersection[], context, colo
         context.arc(n.node.pos.x * scaleFactor, n.node.pos.y * scaleFactor, NODE_SIZE / 2, 0, 2 * Math.PI);
         context.stroke();
         context.fill();
-        /* 
-                n.turns.forEach(t => {
-                    context.fillStyle = "#000000"
-                    context.strokeStyle = "#000000"
-                    context.font = "22px Comic Bold";
-                    const pos = t.pos.copy().mult(50).add(n.node.pos)
-                    context.fillText(t.pos.heading().toFixed(2), pos.x, pos.y)
-                }) */
-        /* 
-                if (n.turns.length > 0) {
-                    context.fillText(calcMeanDirection(n.turns.filter(n => n.edge !== undefined).map(n => n.pos)).mag().toFixed(4), n.node.pos.x + 5, n.node.pos.y - 5);
-                } */
     })
 }
 
@@ -105,37 +92,22 @@ export const renderPoint = (v: Vector, context, color: string) => {
 
 
 export const renderStations = (nodes: Node[], context) => {
+    const size = NODE_SIZE * 2.5 * scaleFactor
     nodes.forEach(n => {
         context.fillStyle = "rgb(255,255,0)"
-        context.fillRect(n.pos.x - NODE_SIZE, n.pos.y - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2)
+        context.strokeStyle = "rgb(255,255,0)"
+        //context.fillRect((n.pos.x * scaleFactor) - (size * .5), (n.pos.y * scaleFactor) - (size * .5), size, size)
+
+        context.beginPath();
+        context.arc(n.pos.x * scaleFactor, n.pos.y * scaleFactor, size, 0, 2 * Math.PI)
+        context.stroke();
         context.fill();
     })
 }
 
-const s = NODE_SIZE * 0.5
+const agentSize = NODE_SIZE * scaleFactor
 
-export const renderAgents = (agents: Agent[], context) => {
-    agents.filter(a => a.alive).forEach(a => {
-        context.save()
-        if (a.highlighted) {
-            context.fillStyle = `rgba(255,0,0,100)`;
-        } else {
-            context.fillStyle = `rgba(255,255,255,50)`;
-        }
-        const aX = a.pos.x
-        const aY = a.pos.y
-        context.translate(aX * scaleFactor, aY * scaleFactor)
-        context.rotate(degToRad(a.dir.heading()))
-        context.fillRect(- (s / 2), - (s / 2), s * 2 * scaleFactor, s * scaleFactor)
-        context.restore()
-        /*         if (a.route && a.task && !a.task.delivered) {
-                    var img = document.getElementById("pizza");
-                    //context.drawImage(img, - (s / 2), - (s / 2), NODE_SIZE, NODE_SIZE);
-                    context.drawImage(img, a.pos.x - s, a.pos.y - s, NODE_SIZE, NODE_SIZE);
-                } */
 
-    })
-}
 
 export const renderText = (v, x, y, context, color) => {
     context.fillStyle = color
@@ -147,7 +119,7 @@ export const renderText = (v, x, y, context, color) => {
 export const renderPizzaAnimations = (despawns: DespawnAnimation[], context) => {
     despawns.forEach(d => {
         var img = document.getElementById("pizza");
-        context.drawImage(img, (d.pos.x * scaleFactor) - s, (d.pos.y * scaleFactor) - s, NODE_SIZE * d.factor, NODE_SIZE * d.factor);
+        context.drawImage(img, (d.pos.x * scaleFactor) - agentSize, (d.pos.y * scaleFactor) - agentSize, NODE_SIZE * d.factor, NODE_SIZE * d.factor);
         d.factor -= 0.01
     })
 }
@@ -162,16 +134,32 @@ export const renderProfitTexts = (despawns: DespawnAnimation[], context) => {
     })
 }
 
-export const renderCrashed = (crashed: Agent[], context) => {
+export const renderAgents = (agents: Agent[], context) => {
+    agents.filter(a => a.alive).forEach(a => {
+        context.save()
+        if (a.highlighted) {
+            context.fillStyle = `rgba(255,0,0,100)`;
+        } else {
+            context.fillStyle = `rgba(255,255,255,50)`;
+        }
+        const aX = a.pos.x
+        const aY = a.pos.y
+        context.translate(aX * scaleFactor, aY * scaleFactor)
+        context.rotate(degToRad(a.dir.heading()))
+        context.fillRect(-agentSize, -agentSize / 2, agentSize * 2, agentSize)
+        context.restore()
+    })
+}
+
+export const renderCrashed = (crashed: DeathAnimation[], context) => {
     crashed.forEach(a => {
         context.save()
         context.fillStyle = "#FF0000"
-        const s = NODE_SIZE * 0.5
         const aX = a.pos.x
         const aY = a.pos.y
-        context.translate(aX, aY)
+        context.translate(aX * scaleFactor, aY * scaleFactor)
         context.rotate(degToRad(a.dir.heading()))
-        context.fillRect(- (s / 2), - (s / 2), s * 1.5, s)
+        context.fillRect(-agentSize, -agentSize / 2, agentSize * 2, agentSize)
         context.restore()
     })
 }

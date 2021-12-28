@@ -9,6 +9,7 @@ import Game from "../modules/game"
 import NeuralNetwork from "../thirdparty/nn"
 import { randInt } from "../etc/math"
 import { BigIntersectionsMap, IntersectionsMap, SpiderWebMap, StraightMap, ZigZagMap } from "../modules/maps/training/trainingsMaps"
+import BigCity from "../modules/maps/bigCity"
 
 
 let gym = new Gym(WIDTH, HEIGHT, IntersectionsMap)
@@ -117,6 +118,11 @@ const GymUI: React.FC = () => {
                 gym.setHighscore = setHighscore
                 setHighscore(0)
             }}>BigIntersectionsMap</Button>
+            <Button onClick={() => {
+                gym = new Gym(WIDTH, HEIGHT, BigCity)
+                gym.setHighscore = setHighscore
+                setHighscore(0)
+            }}>BigCity</Button>
 
         </div>
         <div className="flex flex-row gap-2 items-center justify-center p-2">

@@ -76,6 +76,7 @@
     "postcss-preset-env": "^7.0.1",
     "react-router-dom": "^6.1.1",
     "tailwindcss": "^2.2.19",
+    "three": "^0.136.0",
     "uuid": "^8.3.2",
     "zustand": "^3.6.5"
   }

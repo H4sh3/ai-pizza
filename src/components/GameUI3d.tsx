@@ -1,23 +1,28 @@
-import { useEffect, useRef, useState } from "react"
-import { allowedNeighbours, GAME_DURATION, HEIGHT, nodeSelectionRange, NODE_SIZE, scaleFactor, SCORE_HEIGHT, SCORE_WIDTH, WIDTH } from "../modules/const"
-import { Line } from "../modules/models"
-import { renderLines, renderAgents, renderNodes, renderStations, renderPizzaAnimations, renderProfitTexts, renderCrashed } from "../modules/render"
+import { useEffect, useState } from "react"
+import { GAME_DURATION, HEIGHT, WIDTH } from "../modules/const"
 import Game from "../modules/game"
-import { map } from "../etc/math"
-import Vector from "../models/vector"
-import { Node } from "../models/graph"
+import { degToRad, map } from "../etc/math"
 import { NeuralNetworkStore } from "./GymUI"
+import * as THREE from "three";
+
 
 const game = new Game(WIDTH, HEIGHT)
+
 const mouse = {
     x: 0,
     y: 0
 }
 
+const renderObjects = {
+    nodes: [],
+    agents: [],
+    deathAnimations: []
+}
+
 let drawBg = true
 
 const borderGrayAndP = "border-2 border-gray-300"
-const GameUI: React.FC = () => {
+const GameUI3d: React.FC = () => {
     const [renderUi, setRenderUi] = useState(0)
 
     const props = {
@@ -33,75 +38,105 @@ const GameUI: React.FC = () => {
         RERENDER()
     }
 
-    const canvasRef = useRef(null)
-
-    const onmousemove = (e) => {
-        var rect = canvasRef.current.getBoundingClientRect();
-        mouse.x = e.clientX - rect.left
-        mouse.y = e.clientY - rect.top
-    }
-
     const onmousedown = () => {
         game.mouseClicked(mouse.x, mouse.y)
     }
 
 
     useEffect(() => {
-        const canvas = canvasRef.current
-        const context = canvas.getContext('2d')
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, WIDTH / HEIGHT, 0.1, 1000);
+        var renderer = new THREE.WebGLRenderer();
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        const bgImage = new Image();
-        bgImage.src = "city1.png"; // can also be a remote URL e.g. http://
+        renderer.setSize(WIDTH, HEIGHT);
+        document.getElementById("renderArea").appendChild(renderer.domElement);
+        var geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+        var agentGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.3);
+        var materialG = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        var materialR = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
 
-        let lastTime
-        let frameId
-        const frame = time => {
-            const timeDelta = time - lastTime
-            frameId = requestAnimationFrame(frame)
-            if (timeDelta < 1000 / 60) return
-            lastTime = time
-            game.updateTime(time)
 
-            if (drawBg) {
-                context.drawImage(bgImage, 0, 0, HEIGHT, HEIGHT);
+        var camera_pivot = new THREE.Object3D()
+        camera_pivot.position.set(0, 0, 0)
+
+        const light = new THREE.DirectionalLight(0xffffff, 1, 100); // soft white light
+        light.castShadow = true;
+        light.position.set(0, 1, 0);
+        light.shadow.mapSize.width = 512; // default
+        light.shadow.mapSize.height = 512; // default
+        light.shadow.camera.near = 0.5; // default
+        light.shadow.camera.far = 500; // default
+
+        scene.add(light);
+
+        // camera.position.z = 2
+        camera.position.set(-4, 4, 0)
+        camera.lookAt(camera_pivot.position);
+
+        const newNode = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 10), new THREE.MeshStandardMaterial({ color: 0xaaaaaa }));
+        newNode.position.set(0, -0.55, 0)
+        newNode.castShadow = true;
+        newNode.receiveShadow = true;
+        scene.add(newNode)
+
+        // const helper = new THREE.CameraHelper(light.shadow.camera);
+        // scene.add(helper);
+
+        var animate = function () {
+            requestAnimationFrame(animate);
+            const xyrange = 3
+
+            // check if enough objects exist for nodes
+            while (renderObjects.nodes.length < game.nodes.length) {
+                const newNode = new THREE.Mesh(geometry, materialG);
+                scene.add(newNode)
+                newNode.castShadow = true;
+                renderObjects.nodes.push(newNode)
             }
 
-            renderLines(game.roads, context, "#0000FF")
-            renderLines(game.intersections, context, "#FF0000", false)
-            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00CC00")
-
-            if (game.gameState.stations.length > 0) {
-                renderStations(game.gameState.stations, context)
+            for (let i = 0; i < game.nodes.length; i++) {
+                const n = game.nodes[i]
+                renderObjects.nodes[i].position.set(map(n.pos.x, 0, WIDTH * 2, -xyrange, xyrange), -0.090, map(n.pos.y, 0, HEIGHT * 2, -xyrange, xyrange))
             }
 
-            if (game.gameState.pickingFirstNode) {
-                const highlightedNode: Node = game.nodes.find(n => n.pos.copy().mult(scaleFactor).add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
-                renderNodes(game.nodes.filter(n => n.getNeighbours().length <= allowedNeighbours), context, "rgba(0,200,0,70)", highlightedNode)
+            // check if enough objects exist for agents
+            while (renderObjects.agents.length < game.agents.length) {
+                const newNode = new THREE.Mesh(agentGeometry, materialR);
+                scene.add(newNode)
+                newNode.castShadow = true;
+                renderObjects.agents.push(newNode)
             }
 
-            if (game.shop.edgeBuild.active) {
-                if (game.shop.edgeBuild.startNode === undefined) {
-                    const highlightedNode: Node = game.nodes.find(n => n.pos.copy().add(new Vector(NODE_SIZE / 2, NODE_SIZE / 2)).dist(new Vector(mouse.x, mouse.y)) < nodeSelectionRange)
-                    renderNodes(game.nodes.filter(n => n.getNeighbours().length < 4), context, "rgba(0,200,0,70)", highlightedNode)
-                }
-                renderNodes(game.shop.edgeBuild.validSecondNodes, context, "#00FFFF")
+            for (let i = 0; i < game.agents.length; i++) {
+                const a = game.agents[i]
+                renderObjects.agents[i].position.set(map(a.pos.x, 0, WIDTH * 2, -xyrange, xyrange), 0.05, map(a.pos.y, 0, HEIGHT * 2, -xyrange, xyrange))
+                renderObjects.agents[i].rotation.y = -degToRad(a.dir.heading() + 90)
             }
 
-
-            renderAgents(game.agents, context)
-
-            if (game.gameState.running) {
-                renderPizzaAnimations(game.pizzaAnimation, context)
-                renderProfitTexts(game.scrollingTexts, context)
-                game.step()
+            // check if enough objects exist for agents
+            while (renderObjects.deathAnimations.length < game.deathAnimations.length) {
+                const newNode = new THREE.Mesh(agentGeometry, materialR);
+                scene.add(newNode)
+                newNode.castShadow = true;
+                renderObjects.deathAnimations.push(newNode)
             }
 
-            renderCrashed(game.deathAnimations, context)
+            for (let i = 0; i < game.deathAnimations.length; i++) {
+                const a = game.deathAnimations[i]
+                renderObjects.deathAnimations[i].position.set(map(a.pos.x, 0, WIDTH * 2, -xyrange, xyrange), a.z, map(a.pos.y, 0, HEIGHT * 2, -xyrange, xyrange))
+                renderObjects.deathAnimations[i].rotation.y = -degToRad(a.dir.heading() + 90)
+                a.z -= 0.001
+            }
 
-        }
+            game.deathAnimations = game.deathAnimations.filter(dA => dA.z > -1)
 
-        requestAnimationFrame(frame)
-        return () => cancelAnimationFrame(frameId)
+            renderer.render(scene, camera);
+            game.step()
+        };
+        animate();
+
     }, [])
 
 
@@ -109,12 +144,7 @@ const GameUI: React.FC = () => {
     return <div className="flex flex-col">
 
         <div className="flex flex-row border-2 shadow select-none">
-            <div onMouseMove={onmousemove}
-                onMouseDown={onmousedown}
-                className="p-2"
-            >
-                <canvas style={{ "border": "1px solid #000000" }} ref={canvasRef} {...props} />
-            </div>
+            <div id="renderArea"></div>
             <div className="p-5 flex flex-col gap-2">
                 {game.gameState.pickingFirstNode ?
                     <IntroMessage />
@@ -157,14 +187,6 @@ const GameUI: React.FC = () => {
             </div>
         </div >
         <NeuralNetworkStore neuralNetworkLocation={game.neuralNet} />
-        <Button
-            onClick={
-                () => {
-                    drawBg = !drawBg
-                }
-            }>
-            Toggle draw bg
-        </Button> :
     </div>
 }
 
@@ -328,4 +350,4 @@ const AgentsStats: React.FC<UsesGame> = ({ game }) => {
     </div>
 }
 
-export default GameUI;
+export default GameUI3d;

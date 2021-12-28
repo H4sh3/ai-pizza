@@ -2,6 +2,7 @@ import React from "react";
 import { hot } from "react-hot-loader";
 import "./../assets/scss/App.scss";
 import GameUI from "./GameUI";
+import GameUI3d from "./GameUI3d";
 import GraphEditor, { Button } from "./GraphEditor";
 import GymUI from "./GymUI";
 import MapEditor from "./MapEditor";
@@ -45,7 +46,6 @@ const Navbar: React.FC = ({ children }) => {
       <Button color={`${pathname === "gym" ? "yellow" : "green"}`} onClick={() => {
         window.location.pathname = "/gym"
       }}>Gym</Button>
-
     </div>
     {children}
   </div>
