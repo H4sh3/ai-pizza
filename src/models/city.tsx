@@ -4,15 +4,12 @@ import { Line } from "../modules/models";
 import { Edge, Node } from "./graph"
 import Vector, { isVector } from "./vector";
 import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
+import { accessSync } from "fs";
 
 export class City {
     intersections: Intersection[]
-    roads: Road[]
-
     constructor(nodes: Node[], edges: Edge[]) {
         this.intersections = []
-        this.roads = []
-
         nodes.forEach(n => {
             if (n.edges.length > 0) {
                 this.addIntersection(n)
@@ -40,11 +37,8 @@ export class City {
                 const edge = t1.edge; // edge between turnings
                 if (usedEdges.includes(edge)) continue // connected already
 
-                this.roads.push({
-                    edge,
-                    line1: new Line(t1.line.p1.x, t1.line.p1.y, t2.line.p2.x, t2.line.p2.y,),
-                    line2: new Line(t1.line.p2.x, t1.line.p2.y, t2.line.p1.x, t2.line.p1.y,),
-                })
+                t1.intersection.borders.push(new Line(t1.line.p1.x, t1.line.p1.y, t2.line.p2.x, t2.line.p2.y,))
+                t1.intersection.borders.push(new Line(t1.line.p2.x, t1.line.p2.y, t2.line.p1.x, t2.line.p1.y,))
                 usedEdges.push(edge)
             }
         }
@@ -56,10 +50,6 @@ export class City {
 
     borders() {
         const x = this.intersections.reduce((acc, i) => { return acc.concat(i.borders) }, [])
-        this.roads.forEach(r => {
-            x.push(r.line1)
-            x.push(r.line2)
-        })
         return x
     }
 
@@ -111,6 +101,31 @@ export class City {
     addBorders() {
         this.intersections.forEach(i => i.addBorders())
     }
+
+    getBordersOfNodes(nodes: Node[]) {
+        const relevantIntersections = this.intersections.filter(i => nodes.includes(i.node))
+        const usedIntersections = []
+        const borders: Line[] = relevantIntersections.reduce((acc, i) => {
+
+            i.turns.forEach(t => {
+                const neighbourIntersection = this.intersections.find(i => t.node === i.node)
+                if (neighbourIntersection && !usedIntersections.includes(neighbourIntersection)) {
+                    acc = acc.concat(neighbourIntersection.borders)
+                    neighbourIntersection.turns.forEach(t2 => {
+                        acc = acc.concat(t2.intersection.borders)
+                        usedIntersections.push(neighbourIntersection)
+                    })
+                }
+            })
+
+            if (!usedIntersections.includes(i)) {
+                usedIntersections.push(i)
+                acc = acc.concat(i.borders)
+            }
+            return acc
+        }, [])
+        return borders
+    }
 }
 
 export class Road {
@@ -129,10 +144,11 @@ export interface Turn {
     edge: Edge,
     distToNode: number,
     line?: Line,
-    centerDot?: Vector
+    centerDot?: Vector,
+    intersection: Intersection
 }
 
-export const getTurns = (node): Turn[] => {
+export const getTurns = (node: Node, intersection: Intersection): Turn[] => {
     return node.edges.map(e => {
         const distToNode = 5
         const other = e.getOther(node)
@@ -142,7 +158,8 @@ export const getTurns = (node): Turn[] => {
             pos,
             node: other,
             edge: e,
-            distToNode
+            distToNode,
+            intersection
         }
         return turn
     })
@@ -167,7 +184,7 @@ export class Intersection {
     constructor(node: Node) {
         this.borders = []
         this.node = node
-        this.turns = getTurns(this.node)
+        this.turns = getTurns(this.node, this)
 
         let noIntersections = false
 
@@ -212,7 +229,7 @@ export class Intersection {
 
         // if its only one node close it with extra turn that has no edge and gets border
         // check min max angle
-        handleSmallTurns(this.turns, this.node)
+        handleSmallTurns(this.turns, this.node, this)
 
         // close the intersection where no turning exists
     }
@@ -386,7 +403,8 @@ const minAngleBetweenVectors = (vectors: Vector[], minAngle: number) => {
 export const calcMeanDirection = (directions: Vector[]): Vector => {
     return directions.reduce((sum, v) => { return sum.add(v.copy().normalize()) }, new Vector(0, 0)).div(directions.length)
 }
-const handleSmallTurns = (turns: Turn[], node: Node) => {
+
+const handleSmallTurns = (turns: Turn[], node: Node, intersection: Intersection) => {
     // meav vector of where the turns are pointing
     const meanDirection = calcMeanDirection(turns.filter(t => t.edge !== undefined).map(t => t.pos))
     // use length of this vector to decide if they point in a similar direction
@@ -408,7 +426,8 @@ const handleSmallTurns = (turns: Turn[], node: Node) => {
             node: undefined,
             edge: undefined,
             distToNode,
-            line: new Line(p1.x, p1.y, p2.x, p2.y)
+            line: new Line(p1.x, p1.y, p2.x, p2.y),
+            intersection
         }
         turns.push(newTurn)
     }

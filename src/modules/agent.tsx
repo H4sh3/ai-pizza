@@ -29,9 +29,11 @@ export interface Sensor {
 }
 
 export interface Task {
-    start: Node,
-    target: Node,
-    delivered: boolean,
+    start: Node
+    nodes: Node[]
+    target: Node
+    delivered: boolean
+    borders: Line[]
 }
 
 class Agent {
@@ -68,7 +70,7 @@ class Agent {
             this.nn = new NeuralNetwork(LAYER_CONFIG.input, LAYER_CONFIG.hidden, LAYER_CONFIG.output)
         }
         this.spawnSettings = spawnSettings
-        this.pos = this.spawnSettings.startNode.pos.copy();
+        this.pos = this.spawnSettings.startNode.pos.copy().sub(new Vector(-15, -15));
 
         this.settings = settings
 

@@ -15,6 +15,11 @@ const mouse = {
 }
 
 let drawBg = true
+let extendedView = false
+let frameTime = {
+    i: 0,
+    sum: 0
+}
 
 const borderGrayAndP = "border-2 border-gray-300"
 const GameUI: React.FC = () => {
@@ -45,7 +50,6 @@ const GameUI: React.FC = () => {
         game.mouseClicked(mouse.x, mouse.y)
     }
 
-
     useEffect(() => {
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
@@ -59,16 +63,22 @@ const GameUI: React.FC = () => {
             const timeDelta = time - lastTime
             frameId = requestAnimationFrame(frame)
             if (timeDelta < 1000 / 60) return
+            frameTime.i++
+            frameTime.sum += timeDelta
             lastTime = time
             game.updateTime(time)
 
             if (drawBg) {
+                context.globalAlpha = 0.05;
                 context.drawImage(bgImage, 0, 0, HEIGHT, HEIGHT);
+                context.globalAlpha = 1;
             }
 
-            renderLines(game.roads, context, "#0000FF")
-            renderLines(game.intersections, context, "#FF0000", false)
-            renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00CC00")
+            if (extendedView) {
+                renderLines(game.roads, context, "#0000FF")
+                renderLines(game.intersections, context, "#FF0000", false)
+                renderNodes(game.agents.filter(a => a.task && a.task.target).map(a => a.task.target), context, "#00CC00")
+            }
 
             if (game.gameState.stations.length > 0) {
                 renderStations(game.gameState.stations, context)
@@ -96,8 +106,15 @@ const GameUI: React.FC = () => {
                 game.step()
             }
 
-            renderCrashed(game.deathAnimations, context)
+            if (extendedView) {
+                renderCrashed(game.deathAnimations, context)
+            }
 
+            /*             if (game.agents.length > 0) {
+                            if (game.agents[0].task !== undefined) {
+                                renderLines(game.agents[0].task.borders, context, "#0000FF")
+                            }
+                        } */
         }
 
         requestAnimationFrame(frame)
@@ -152,11 +169,12 @@ const GameUI: React.FC = () => {
                                 </Button> :
                                 <></>
                         }
+                        {frameTime.sum}
                     </div>
                 }
             </div>
         </div >
-        <NeuralNetworkStore neuralNetworkLocation={game.neuralNet} loadSideEffect={() => { game.agents = []; game.deathAnimations = [] }} />
+        <NeuralNetworkStore neuralNetworkLocation={game.neuralNet} loadHandler={(key: string) => { game.loadModel(key) }} />
         <Button
             onClick={
                 () => {

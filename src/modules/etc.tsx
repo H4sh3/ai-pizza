@@ -1,6 +1,6 @@
 import search from "../etc/astar"
 import Agent, { Sensor, SensorSettings } from "./agent"
-import { NODE_SIZE } from "./const"
+import { NODE_SIZE, scaleFactor } from "./const"
 import { checkLineIntersection, map } from "../etc/math"
 import Vector, { isVector } from "../models/vector"
 import { Edge, Node } from "../models/graph"
@@ -97,8 +97,10 @@ export function transformSensor(s: Sensor, agent: Agent) {
 
 
 export const getBody = (agent: Agent): Line[] => {
-    return [new Line(agent.pos.x - 5, agent.pos.y, agent.pos.x + 5, agent.pos.y),
-    new Line(agent.pos.x, agent.pos.y - 5, agent.pos.x, agent.pos.y + 5)]
+    return [
+        new Line(agent.pos.x - 5, agent.pos.y, agent.pos.x + 5, agent.pos.y),
+        new Line(agent.pos.x, agent.pos.y - 5, agent.pos.x, agent.pos.y + 5)
+    ]
 }
 
 export const agentsCollisions = (agent: Agent, roads: Line[], checkpoints: Line[]): boolean => {
@@ -162,7 +164,6 @@ export const getAllRoutesDict = (nodes: Node[]) => {
     })
 
     sorted.sort((a, b) => a.l > b.l ? -1 : 0)
-    console.log(sorted)
     return sorted;
 }
 
@@ -173,13 +174,11 @@ export const serializeGraph = (nodes: Node[], edges: Edge[]) => {
         s += `{"id":"${n.id}" , "x":${n.pos.x} , "y":${n.pos.y}, "edges":[${n.edges.map(n => { return `"${n.id}"` })}]},`
     })
     s += `\n]`
-    console.log(s)
     let e = "[\n"
     edges.forEach(n => {
         e += `{"id":"${n.id}" , "start":"${n.node1.id}" , "end":"${n.node2.id}" },`
     })
     e += `\n]`
-    console.log(e)
 }
 
 export const deserialize = (nodesSer, edgesSer): { nodes: Node[], edges: Edge[] } => {

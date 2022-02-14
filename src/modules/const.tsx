@@ -11,7 +11,7 @@ export const SCORE_HEIGHT = 80
 
 export const allowedNeighbours = 10
 export const nodeSelectionRange = NODE_SIZE * 2;
-export const GAME_DURATION = 60 * 30
+export const GAME_DURATION = 60 * 5
 
 export const LAYER_CONFIG = {
     input: 18,

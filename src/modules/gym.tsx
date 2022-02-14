@@ -97,7 +97,8 @@ export class Gym {
         this.city = new City(nodes, edges)
 
         this.allRoutes = getAllRoutesDict(this.nodes)
-        for (let i = 0; i < 5; i++) {
+        console.log(this.allRoutes)
+        for (let i = 0; i < 9; i++) {
             this.allRoutes[i].routes.forEach(r => {
                 this.selectedRoutes.push(r)
             })
@@ -113,10 +114,6 @@ export class Gym {
         this.roads = this.city.intersections.reduce((acc, n) => {
             return acc.concat(n.borders)
         }, [])
-        this.city.roads.forEach(r => {
-            this.roads.push(r.line1)
-            this.roads.push(r.line2)
-        })
     }
 
     addAgents() {
@@ -136,7 +133,9 @@ export class Gym {
         const task: Task = {
             delivered: false,
             start: route[0],
-            target: route[route.length - 1]
+            target: route[route.length - 1],
+            nodes: route,
+            borders: this.city.getBordersOfNodes(route)
         }
 
         const spawnSettings: SpawnSettings = {
@@ -220,7 +219,7 @@ export class Gym {
                 // transform sensors to current position & direction
                 const transformedSensors = a.sensors.map(sensor => transformSensor(sensor, a))
                 this.sensorVisual = [...this.sensorVisual, ...transformedSensors]
-                const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, this.roads)
+                const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, a.task.borders)
 
                 const checkpointIntersections = getSensorIntersectionsWith(a, transformedSensors, [this.checkpoints[a.reachedCheckpoints % this.checkpoints.length]])
 
@@ -248,7 +247,6 @@ export class Gym {
                     */
                     a.overallCheckpoints += a.reachedCheckpoints
                     a.reachedCheckpoints = 0
-
                     a.reset()
                 }
 

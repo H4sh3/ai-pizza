@@ -119,6 +119,11 @@ export class Game {
         // this.spawnStation(this.nodes[randInt(0, this.nodes.length - 1)])
     }
 
+    loadModel(key: string) {
+        this.neuralNet = NeuralNetwork.deserialize(localStorage.getItem(key))
+        this.agents = []
+    }
+
     init() {
         this.agentSettings = {
             steerRange: 10,
@@ -142,7 +147,7 @@ export class Game {
         this.initRoutes()
 
         this.gameState = {
-            numAgents: 25,
+            numAgents: 1,
             delivered: 0,
             running: false,
             stations: [],
@@ -173,10 +178,6 @@ export class Game {
         this.roads = this.city.intersections.reduce((acc, n) => {
             return acc.concat(n.borders)
         }, [])
-        this.city.roads.forEach(r => {
-            this.roads.push(r.line1)
-            this.roads.push(r.line2)
-        })
     }
 
     spawnAgent(station: Node, mutate: boolean = false) {
@@ -230,7 +231,9 @@ export class Game {
                 const task: Task = {
                     start: route[0],
                     target: route[route.length - 1],
-                    delivered: false
+                    delivered: false,
+                    nodes: route,
+                    borders: this.city.getBordersOfNodes(route)
                 }
                 updateOrientation(a, route)
 
@@ -244,7 +247,7 @@ export class Game {
                 // transform sensors to current position & direction
                 const transformedSensors = a.sensors.map(sensor => transformSensor(sensor, a))
                 this.sensorVisual = [...this.sensorVisual, ...transformedSensors]
-                const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, this.city.borders())
+                const roadIntersections = getSensorIntersectionsWith(a, transformedSensors, a.task.borders)
 
                 const currentCheckpoint = [a.route[a.reachedCheckpoints % a.route.length]]
                 const checkpointIntersections = getSensorIntersectionsWith(a, transformedSensors, currentCheckpoint)
@@ -263,6 +266,8 @@ export class Game {
                         const routeBack = search(this.nodes, a.task.target, a.task.start)
                         updateOrientation(a, routeBack)
                         a.route = getCheckpoints(routeBack, this.city);
+                        a.task.nodes = routeBack
+                        a.task.borders = this.city.getBordersOfNodes(routeBack)
                         a.task.delivered = true
 
                         const profit = this.handleMoney(a.route.length)

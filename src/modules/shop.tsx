@@ -1,8 +1,4 @@
-import { start } from "repl"
-import { NODE_SIZE } from "./const"
-import { addEdge } from "./maps/trainingsEnv"
-import { checkLineIntersection } from "./math"
-import { Direction, Edge, isVector, Line, Node } from "./models"
+import { Edge, Node } from "../models/graph"
 
 class Shop {
     prices: {
@@ -21,7 +17,7 @@ class Shop {
     constructor() {
 
         this.prices = {
-            agent: 500,
+            agent: 200,
             addEdge: 100,
             speed: 100
         }
@@ -38,7 +34,6 @@ class Shop {
         this.edgeBuild.validSecondNodes = this.edgeBuild.validSecondNodes = nodes
             .filter(n => n !== startNode)
             .filter(n => !startNode.getNeighbours().includes(n))
-        //.filter(n => n.pos.dist(startNode.pos) === NODE_SIZE * 3)
     }
 }
 
